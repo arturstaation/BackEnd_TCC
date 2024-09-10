@@ -1,6 +1,7 @@
 instalar bibliotecas
 pip install Flask
 pip install python-dotenv
+pip install selenium
 
 
 Para rodar
