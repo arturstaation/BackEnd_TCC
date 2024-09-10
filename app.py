@@ -19,6 +19,7 @@ def RequestGetReview(place_id):
    reviews = getReviews(place_id)
    
    return {
+       'total': len(reviews),
        'reviews': reviews,
    }
     

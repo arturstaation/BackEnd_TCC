@@ -1,6 +1,4 @@
 import requests
-from loadVariables import GOOGLE_PLACES_API_KEY
-
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -14,7 +12,7 @@ from selenium.webdriver.common.action_chains import ActionChains
 
  # Executa em modo headless, sem interface gráfica
 
-def gdados(response, dados):
+def getDados(response, dados):
 
         for i in range(len(response)):
 
@@ -106,7 +104,7 @@ def getReviews(id):
             response = json.loads(requests.get(antigo).text[5:].encode('utf-8', 'ignore').decode('utf-8'))
             token_atual = response[1]
             token_atual = token_atual.replace("=", "%3D")
-            gdados(response[2], dados)
+            getDados(response[2], dados)
         
             token_proximo = None
             contador = 0
@@ -116,16 +114,7 @@ def getReviews(id):
 
                 if(response[0] is None):
                     token_proximo = response[1]
-                    gdados(response[2], dados)
-                    '''
-                    for i in range(len(response[2])):
-                        
-                        try:
-                            dados.append({"tempo": response[2][i][0][1][6], "estrelas": response[2][i][0][2][0][0], "avaliacao": (str(response[2][i][0][2][15][0][0]).replace('\n', ' '))})
-                        except:
-                            dados.append({"tempo": response[2][i][0][1][6], "estrelas": response[2][i][0][2][0][0], "avaliacao": "null"})
-                            pass
-                     '''
+                    getDados(response[2], dados)
                     if(token_proximo is not None):
                         
                         token_proximo = token_proximo.replace("=", "%3D")
@@ -157,7 +146,7 @@ def getReviews(id):
                     if("listugcposts" in xhr_requests[i]):
                         url = xhr_requests[i]
             response = json.loads(requests.get(url).text[5:].encode('utf-8', 'ignore').decode('utf-8'))
-            gdados(response[2], dados)
+            getDados(response[2], dados)
         
         return dados
 
