@@ -1,57 +1,74 @@
 import requests
-import googlemaps
-import time
-GOOGLE_PLACES_API_KEY = "AIzaSyCTKyWv9us_sTGbajYO1RL9iruc_BATQ7E"
+from dotenv import load_dotenv
+import os
+from pathlib import Path
 
-# Configuração do Google Maps
-gmaps = googlemaps.Client(key=GOOGLE_PLACES_API_KEY)
+dotenv_path = Path('./variaveis.env')
+load_dotenv(dotenv_path=dotenv_path)
+
+# Acessa a variável de ambiente
+GOOGLE_PLACES_API_KEY = os.getenv("GOOGLE_PLACES_API_KEY")
+
+# Verifica se a variável foi carregada corretamente
+if not GOOGLE_PLACES_API_KEY:
+    raise ValueError("A chave de API 'GOOGLE_PLACES_API_KEY' não foi encontrada nas variáveis de ambiente.")
+
+
 
 def getEstabelecimentos(nome):
 
     try:
         # Localização e parâmetros de busca
-        location = 'São Paulo, Brasil'  # Localização fixa em São Paulo
-        radius = 5000  # Raio de busca em metros (ajuste conforme necessário)
+        location = 'em São Paulo, Brasil'  # Localização fixa em São Paulo
+        print(GOOGLE_PLACES_API_KEY)
         
         params = {
-            'input': nome,
-            'inputtype': 'textquery',
-            'fields': 'formatted_address,name,rating,opening_hours,geometry',
-            'key': GOOGLE_PLACES_API_KEY
+            'query': nome + location,
+            #'radius': location,
+            'type': 'restaurant',
+            'key': GOOGLE_PLACES_API_KEY,
+
+
         }
 
         all_results = []
 
-        while True:
-            time.sleep(1)  # Pausa para evitar limites de taxa da API
-            # Faz a solicitação inicial
-            url = 'https://maps.googleapis.com/maps/api/place/findplacefromtext/json'
-            response = requests.get(url, params=params)
-            result = response.json()
+       
+        url = 'https://maps.googleapis.com/maps/api/place/textsearch/json'
+        response = requests.get(url, params=params)
+        result = response.json()
 
-            print("Resultado")
-            print(result)
+        if 'results' in result:
 
-            if 'results' in result:
-                all_results.extend(result['results'])
 
-            # Verifica se há mais páginas de resultados disponíveis
-            if 'next_page_token' in result:
-                params['page_token'] = result['next_page_token']
-                time.sleep(2)  # Aguarde antes de buscar a próxima página
-            else:
-                break  # Sai do loop se não houver mais páginas de resultados
+            for results in result['results']:
+                place_info = {
+                    "name": results.get("name"),
+                    "formatted_address": results.get("formatted_address"),
+                    "place_id": results.get("place_id"),
+                    "reviews": results.get("user_ratings_total"),  # Corrigido para user_ratings_total
+                    "rating": results.get("rating")
+                }
+                
+                all_results.append(place_info)
+                
+
+        # Verifica se há mais páginas de resultados disponíveis
         
-        # Filtra os resultados para garantir que sejam de São Paulo
-        filtered_results = []
+        '''
+        if 'next_page_token' in result:
+            print("Proxima Pagina: " + result['next_page_token'])
+            params['page_token'] = result['next_page_token']
+            time.sleep(2)  # Aguarde antes de buscar a próxima página
+        else:
+            break  # Sai do loop se não houver mais páginas de resultados
+        ###
+        '''
+        next_token = ""
+        if('next_page_token' in  result):
+            next_token = result['next_page_token']
 
-        for place in all_results:
-            # Verifica se o lugar está em São Paulo
-            address_components = place.get('vicinity', '')
 
-            if 'São Paulo' in address_components:
-                filtered_results.append(place)
-
-        return filtered_results
+        return all_results, next_token
     except:
         raise Exception("Erro ao Processar")

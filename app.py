@@ -3,16 +3,14 @@ from funcoes.getEstabelecimentos import *
 
 app = Flask(__name__)
 
-# Rota de exemplo
-@app.route('/')
-def home():
-    return jsonify(message="Bem-vindo à minha API!")
-
 @app.route('/GetEstabelecimentos/<nome>', methods=['GET'])
 def RequestGetEstabelecimentos(nome):
-   print(nome)
-   resposta = getEstabelecimentos(nome)
-   return resposta
+   estabelecimentos, next_page = getEstabelecimentos(nome)
+   
+   return {
+       'establishments': estabelecimentos,
+       'next_page_token': next_page
+   }
     
 if __name__ == '__main__':
     app.run(debug=True)
