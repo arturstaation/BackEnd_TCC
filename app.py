@@ -5,23 +5,38 @@ from funcoes.getReviews import *
 app = Flask(__name__)
 
 @app.route('/GetEstabelecimentos/<nome>', methods=['GET'])
-def RequestGetEstabelecimentos(nome):
-   estabelecimentos, next_page = getEstabelecimentos(nome)
+def getEstabelecimentos(nome):
    
-   return {
-       'establishments': estabelecimentos,
-       'next_page_token': next_page
-   }
+   try:
+    estabelecimentos, next_page = handleGetEstabelecimentos(nome)
+    
+    return {
+        'establishments': estabelecimentos,
+        'next_page_token': next_page,
+        'hasError': False,
+    }
+   except Exception as e:
+      return {
+         'hasError': True,
+         'message': e
+      }
 
 
 @app.route('/GetReviews/<place_id>', methods=['GET'])
-def RequestGetReview(place_id):
-   reviews = getReviews(place_id)
-   
-   return {
-       'total': len(reviews),
-       'reviews': reviews,
-   }
+def getReview(place_id):
+   try:
+    reviews = handleGetReviews(place_id)
+    
+    return {
+        'total': len(reviews),
+        'reviews': reviews,
+        'hasError': False,
+    }
+   except Exception as e:
+    return {
+         'hasError': True,
+         'message': e
+    }
     
 if __name__ == '__main__':
     app.run(debug=True)

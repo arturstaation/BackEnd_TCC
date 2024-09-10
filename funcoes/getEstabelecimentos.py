@@ -1,6 +1,6 @@
 import requests
 from loadVariables import GOOGLE_PLACES_API_KEY
-def getEstabelecimentos(nome):
+def handleGetEstabelecimentos(nome):
 
     try:
         # Localização e parâmetros de busca
@@ -55,5 +55,5 @@ def getEstabelecimentos(nome):
 
 
         return all_results, next_token
-    except:
-        raise Exception("Erro ao Processar")
+    except Exception as e:
+        raise Exception("Erro ao Obter Estabelecimentos. " + e)
