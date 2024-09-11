@@ -120,8 +120,6 @@ def handleGetReviews(id):
             print(error_message)
             return ("Erro ao Obter Reviews do Estabelecimento")  # Levanta a exceção novamente com a mensagem formatada
 
-
-        print("teste")
         # Clica no botão "Sort"
         try:
             sort_button = WebDriverWait(driver, 2).until(

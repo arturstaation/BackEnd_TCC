@@ -1,6 +1,9 @@
-from flask import Flask, jsonify, request
+from flask import Flask, send_file, make_response
 from funcoes.getEstabelecimentos import *
 from funcoes.getReviews import *
+import pandas as pd
+from io import BytesIO
+import base64
 
 app = Flask(__name__)
 
@@ -23,6 +26,7 @@ def getEstabelecimentos(nome):
             'hasError': True,
             'message': estabelecimentos
         }, 500 
+    
    except Exception as e:
         return {
             'establishments': [],
@@ -33,7 +37,7 @@ def getEstabelecimentos(nome):
 
 
 @app.route('/GetReviews/<place_id>', methods=['GET'])
-def getReview(place_id):
+def getReviews(place_id):
    try: 
     
     reviews = handleGetReviews(place_id)
@@ -45,6 +49,7 @@ def getReview(place_id):
         'hasError': False,
         'message': 'Sucesso'
     }
+
     else:
        return {
             'quantity': 0,
@@ -52,10 +57,46 @@ def getReview(place_id):
             'hasError': True,
             'message': reviews
     }, 500 
+
    except Exception as e:
     return {
             'quantity': 0,
             'reviews': [],
+            'hasError': True,
+            'message': str(e)
+    }, 500  
+   
+@app.route('/GetReviewsExcel/<place_id>', methods=['GET'])
+def getReviewsExcel(place_id):
+   try: 
+    
+    reviews = handleGetReviews(place_id)
+
+    if not (isinstance(reviews, str)):
+        output = BytesIO()
+        
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df = pd.DataFrame(reviews)
+            df.to_excel(writer, sheet_name='Sheet_name_1', index=False)
+
+        output.seek(0)
+        excel_base64 = base64.b64encode(output.read()).decode('utf-8')
+
+        response = {
+            'hasError': False,
+            'message': 'Arquivo gerado com sucesso',
+            'arquivo': excel_base64
+        }
+
+        return response
+    else:
+       return {
+            'hasError': True,
+            'message': reviews
+    }, 500 
+
+   except Exception as e:
+    return {
             'hasError': True,
             'message': str(e)
     }, 500  
