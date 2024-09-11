@@ -26,7 +26,7 @@ def getEstabelecimentos(nome):
 def getReview(place_id):
    try:
     reviews = handleGetReviews(place_id)
-    
+    print("teste")
     return {
         'total': len(reviews),
         'reviews': reviews,

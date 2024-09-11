@@ -5,7 +5,6 @@ def handleGetEstabelecimentos(nome):
     try:
         # Localização e parâmetros de busca
         location = 'em São Paulo, Brasil'  # Localização fixa em São Paulo
-        print(GOOGLE_PLACES_API_KEY)
         
         params = {
             'query': nome + location,
@@ -39,16 +38,6 @@ def handleGetEstabelecimentos(nome):
                 
 
         # Verifica se há mais páginas de resultados disponíveis
-        
-        '''
-        if 'next_page_token' in result:
-            print("Proxima Pagina: " + result['next_page_token'])
-            params['page_token'] = result['next_page_token']
-            time.sleep(2)  # Aguarde antes de buscar a próxima página
-        else:
-            break  # Sai do loop se não houver mais páginas de resultados
-        ###
-        '''
         next_token = ""
         if('next_page_token' in  result):
             next_token = result['next_page_token']
@@ -56,4 +45,4 @@ def handleGetEstabelecimentos(nome):
 
         return all_results, next_token
     except Exception as e:
-        raise Exception("Erro ao Obter Estabelecimentos. " + e)
+        raise Exception(f"Erro ao Obter Estabelecimentos. " + e)

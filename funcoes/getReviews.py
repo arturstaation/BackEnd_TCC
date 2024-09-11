@@ -8,12 +8,32 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 
-def getDados(response, dados):
-
+def getDataFromProfile(perfil,driver):  
     
+    field_names = ['Avaliacoes','Classificacoes','Fotos','Videos','Legendas','Respostas','Edicoes','Informadas como Incorretas','Lugares Adicionadas', 'Estradas Adicionadas', 'Informacoes Verificadas', 'P/R']
+    try:
+        driver.get(perfil)
+        contributions_button = WebDriverWait(driver, 2).until(
+            EC.visibility_of_element_located((By.XPATH, "/html/body/div[3]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[1]/div/div[2]/div[2]/span/text()"))
+        )
+        contributions_button.click()
+    except Exception as e:
+        print(f"Erro ao Obter Dados do Perfil ${perfil}. " + e)
+
+    try:
+        for i in range (1,13):
+            fields = driver.find_element(By.XPATH, f"/html/body/div[3]/div[3]/div[1]/div/div[2]/div/div[2]/div/div/div[2]/div[1]/div/div[${i}]/span[3]").text
+        print("objeto montado")
+    except Exception as e:
+        print(f"Erro ao Obter Contribuições do Perfil ${perfil}. " + e)
+    
+
+def getData(response, dados,driver):
+
     for i in range(len(response)):
         tempo = response[i][0][1][6]
         perfil = response[i][0][1][4][5][2][0]
+        getDataFromProfile(perfil,driver)
         reviews = response[i][0][1][4][5][5]
         fotos = response[i][0][1][4][5][6]
         estrelas = response[i][0][2][0][0]
@@ -21,7 +41,9 @@ def getDados(response, dados):
             avaliacao = str(response[i][0][2][15][0][0]).replace('\n', ' ')
         except IndexError:
             avaliacao = "null"
+
         dados.append({"tempo": tempo, "estrelas": estrelas, "avaliacao": avaliacao, "perfil": perfil, "reviews": reviews, "fotos": fotos})
+        
 
 def handleGetReviews(id):
     try:
@@ -45,7 +67,7 @@ def handleGetReviews(id):
             reviews_button.click()
         except Exception as e:
             driver.quit()
-            raise Exception("Erro ao Obter Reviews do Estabalecimento de Id ${id}. " + e)
+            raise Exception(f"Erro ao Obter Reviews do Estabalecimento de Id ${id}. " + e)
 
         # Clica no botão "Sort"
         try:
@@ -55,7 +77,7 @@ def handleGetReviews(id):
             sort_button.click()
         except Exception as e:
             driver.quit()
-            raise Exception("Erro ao Obter Reviews do Estabalecimento de Id ${id}. " + e)
+            raise Exception(f"Erro ao Obter Reviews do Estabalecimento de Id ${id}. " + e)
 
         # Clica no botão "Newest"
         try:
@@ -65,16 +87,26 @@ def handleGetReviews(id):
             newest_button.click()
         except Exception as e:
             driver.quit()
-            raise Exception("Erro ao Obter Reviews do Estabalecimento de Id ${id}. " + e)
+            raise Exception(f"Erro ao Obter Reviews do Estabalecimento de Id ${id}. " + e)
 
         antigo = "a"
         contador = 0
         numero_reviews = wait.until(EC.presence_of_element_located((By.XPATH, '/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[2]/div[2]/div/div[2]/div[3]'))).text.split(' ')
         num = int(numero_reviews[0].replace(".", ""))
+        xhr_requests = driver.execute_script("""
+                var requests = performance.getEntriesByType('resource');
+                var xhrRequests = [];
+                for (var i = 0; i < requests.length; i++) {
+                    var request = requests[i];
+                    if (request.initiatorType === 'xmlhttprequest') {
+                        xhrRequests.push(request.name);
+                    }
+                }
+                return xhrRequests;
+        """)
 
         if num > 10:
             while contador < 3:
-                contador = 0
                 xhr_requests = driver.execute_script("""
                 var requests = performance.getEntriesByType('resource');
                 var xhrRequests = [];
@@ -85,7 +117,8 @@ def handleGetReviews(id):
                     }
                 }
                 return xhrRequests;
-                """)
+                 """)
+                contador = 0
                 for i in range(len(xhr_requests)):
                     if "listugcposts" in xhr_requests[i]:
                         contador += 1
@@ -100,7 +133,7 @@ def handleGetReviews(id):
             response = json.loads(requests.get(antigo).text[5:].encode('utf-8', 'ignore').decode('utf-8'))
             token_atual = response[1]
             token_atual = token_atual.replace("=", "%3D")
-            getDados(response[2], dados)
+            getData(response[2], dados,driver)
 
             token_proximo = None
             contador = 0
@@ -108,7 +141,7 @@ def handleGetReviews(id):
                 response = json.loads(requests.get(url).text[5:].encode('utf-8', 'ignore').decode('utf-8'))
                 if response[0] is None:
                     token_proximo = response[1]
-                    getDados(response[2], dados)
+                    getData(response[2], dados,driver)
                     if token_proximo is not None:
                         token_proximo = token_proximo.replace("=", "%3D")
                         url = url.replace(token_atual, token_proximo)
@@ -116,24 +149,13 @@ def handleGetReviews(id):
                 else:
                     break
         else:
-            xhr_requests = driver.execute_script("""
-            var requests = performance.getEntriesByType('resource');
-            var xhrRequests = [];
-            for (var i = 0; i < requests.length; i++) {
-                var request = requests[i];
-                if (request.initiatorType === 'xmlhttprequest') {
-                    xhrRequests.push(request.name);
-                }
-            }
-            return xhrRequests;
-            """)
             for i in range(len(xhr_requests)):
                 if "listugcposts" in xhr_requests[i]:
                     url = xhr_requests[i]
             response = json.loads(requests.get(url).text[5:].encode('utf-8', 'ignore').decode('utf-8'))
-            getDados(response[2], dados)
-
+            getData(response[2], dados,driver)
         driver.quit()
         return dados
     except Exception as e:
-        raise Exception("Erro ao Obter Reviews do Estabalecimento de Id ${id}. " + e)
+        driver.quit()
+        raise Exception(f"Erro ao Obter Reviews do Estabalecimento de Id ${id}. " + e)
