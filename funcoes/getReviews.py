@@ -3,29 +3,51 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 import requests
 import json
+import time
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 
+field_names = ['Local Guide', 'Avaliacoes','Classificacoes','Fotos','Videos','Legendas','Respostas','Edicoes','Informadas como Incorretas','Lugares Adicionadas', 'Estradas Adicionadas', 'Informacoes Verificadas', 'P/R']
 def getDataFromProfile(perfil,driver):  
     
-    field_names = ['Avaliacoes','Classificacoes','Fotos','Videos','Legendas','Respostas','Edicoes','Informadas como Incorretas','Lugares Adicionadas', 'Estradas Adicionadas', 'Informacoes Verificadas', 'P/R']
+    obj = {field: "null" for field in field_names}
+
+    driver.get(perfil)
     try:
-        driver.get(perfil)
-        contributions_button = WebDriverWait(driver, 2).until(
-            EC.visibility_of_element_located((By.XPATH, "/html/body/div[3]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[1]/div/div[2]/div[2]/span/text()"))
+        element = WebDriverWait(driver, 5).until(
+            EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[1]/div/div[2]/div[2]/span"))
         )
+        element_text = element.text
+        if "Local Guide" in element_text:
+            obj[field_names[0]] = True
+        else:
+            obj[field_names[0]] = False
+        
+        
+        contributions_button = WebDriverWait(driver, 5).until(
+
+                EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[1]/div/div[1]/div/img"))
+            )
         contributions_button.click()
+        div = 1
+        if(obj[field_names[0]]):
+            div = 2
+        painel = WebDriverWait(driver, 5).until(
+
+                EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[1]/div/div[2]/div/div[2]/div"))
+        )
+        for i in range (1,13):             
+            fields = driver.find_element(By.XPATH, f"/html/body/div[2]/div[3]/div[1]/div/div[2]/div/div[2]/div/div/div[2]/div[{div}]/div/div[{i}]/span[3]")
+            obj[field_names[i]] = fields.text
+        return obj
     except Exception as e:
         print(f"Erro ao Obter Dados do Perfil ${perfil}. " + e)
+        return obj
 
-    try:
-        for i in range (1,13):
-            fields = driver.find_element(By.XPATH, f"/html/body/div[3]/div[3]/div[1]/div/div[2]/div/div[2]/div/div/div[2]/div[1]/div/div[${i}]/span[3]").text
-        print("objeto montado")
-    except Exception as e:
-        print(f"Erro ao Obter Contribuições do Perfil ${perfil}. " + e)
+
+    
     
 
 def getData(response, dados,driver):
@@ -33,7 +55,13 @@ def getData(response, dados,driver):
     for i in range(len(response)):
         tempo = response[i][0][1][6]
         perfil = response[i][0][1][4][5][2][0]
-        getDataFromProfile(perfil,driver)
+        profile_data = {field: "null" for field in field_names}
+        try:
+            profile_data = getDataFromProfile(perfil,driver)
+            
+        except Exception as e:
+            print(f"Erro ao Obter Contribuições do Perfil ${perfil}. " + e)
+           
         reviews = response[i][0][1][4][5][5]
         fotos = response[i][0][1][4][5][6]
         estrelas = response[i][0][2][0][0]
@@ -42,15 +70,40 @@ def getData(response, dados,driver):
         except IndexError:
             avaliacao = "null"
 
-        dados.append({"tempo": tempo, "estrelas": estrelas, "avaliacao": avaliacao, "perfil": perfil, "reviews": reviews, "fotos": fotos})
+        data = {
+        "tempo": tempo,
+        "estrelas": estrelas,
+        "avaliacao": avaliacao,
+        "perfil": perfil,
+        "reviews": reviews,
+        "fotos": fotos,
+        "local guide": profile_data[field_names[0]],
+        "avaliacoes": profile_data[field_names[1]],
+        "classificacoes": profile_data[field_names[2]],
+        "fotos": profile_data[field_names[3]],
+        "videos": profile_data[field_names[4]],
+        "legendas": profile_data[field_names[5]],
+        "respostas": profile_data[field_names[6]],
+        "edicoes": profile_data[field_names[7]],
+        "informadas como incorretas": profile_data[field_names[8]],
+        "lugares adicionados": profile_data[field_names[9]],
+        "estradas adicionadas": profile_data[field_names[10]],
+        "informacoes verificadas": profile_data[field_names[11]],
+        "p/r": profile_data[field_names[12]]
+        }
+
+
+        dados.append(data)
         
 
 def handleGetReviews(id):
     try:
         chrome_options = Options()
+        #'''
         chrome_options.add_argument("--headless")  # Executa em modo headless
         chrome_options.add_argument("--disable-gpu")  # Desativa a GPU, útil para ambientes headless
         chrome_options.add_argument("--no-sandbox")  # Necessário para rodar em alguns ambientes
+        #'''
         driver = webdriver.Chrome(options=chrome_options)
         actions = ActionChains(driver)
         MAX_WAIT_TIME = 0  
