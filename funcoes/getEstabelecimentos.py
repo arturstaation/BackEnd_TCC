@@ -45,4 +45,7 @@ def handleGetEstabelecimentos(nome):
 
         return all_results, next_token
     except Exception as e:
-        raise Exception(f"Erro ao Obter Estabelecimentos. " + e)
+
+        error_message = f"Erro ao Obter Estabelecimentos {nome}. Erro: {str(e)}"
+        print(error_message)
+        return ("Erro ao Obter Estabelecimentos")

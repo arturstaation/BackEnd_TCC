@@ -9,33 +9,56 @@ def getEstabelecimentos(nome):
    
    try:
     estabelecimentos, next_page = handleGetEstabelecimentos(nome)
-    
-    return jsonify({
-            'establishments': estabelecimentos,
-            'next_page_token': next_page,
-            'hasError': False,
-        })
+    if not (isinstance(estabelecimentos, str)):
+        return {
+                'establishments': estabelecimentos,
+                'next_page_token': next_page,
+                'hasError': False,
+                'message': 'Sucesso'
+            }
+    else:
+        return {
+            'establishments': [],
+            'next_page_token': '',
+            'hasError': True,
+            'message': estabelecimentos
+        }, 500 
    except Exception as e:
-        return jsonify({
+        return {
+            'establishments': [],
+            'next_page_token': '',
             'hasError': True,
             'message': str(e)
-        }), 500 
+        }, 500 
 
 
 @app.route('/GetReviews/<place_id>', methods=['GET'])
 def getReview(place_id):
    try: 
+    
     reviews = handleGetReviews(place_id)
-    return jsonify({
-            'quantity': len(reviews),
-            'reviews': reviews,
-            'hasError': False,
-    })
+
+    if not (isinstance(reviews, str)):
+        return {
+        'quantity': len(reviews),
+        'reviews': reviews,
+        'hasError': False,
+        'message': 'Sucesso'
+    }
+    else:
+       return {
+            'quantity': 0,
+            'reviews': [],
+            'hasError': True,
+            'message': reviews
+    }, 500 
    except Exception as e:
-    return jsonify({
+    return {
+            'quantity': 0,
+            'reviews': [],
             'hasError': True,
             'message': str(e)
-    }), 500  
+    }, 500  
     
 if __name__ == '__main__':
     app.run(debug=True)

@@ -116,8 +116,12 @@ def handleGetReviews(id):
             reviews_button.click()
         except Exception as e:
             driver.quit()
-            raise Exception(f"Erro ao Obter Reviews do Estabalecimento de Id ${id}. " + e)
+            error_message = f"Erro ao Obter Reviews do Estabelecimento de Id {id}. Erro: {str(e)}"
+            print(error_message)
+            return ("Erro ao Obter Reviews do Estabelecimento")  # Levanta a exceção novamente com a mensagem formatada
 
+
+        print("teste")
         # Clica no botão "Sort"
         try:
             sort_button = WebDriverWait(driver, 2).until(
@@ -126,7 +130,9 @@ def handleGetReviews(id):
             sort_button.click()
         except Exception as e:
             driver.quit()
-            raise Exception(f"Erro ao Obter Reviews do Estabalecimento de Id ${id}. " + e)
+            error_message = f"Erro ao Obter Reviews do Estabelecimento de Id {id}. Erro: {str(e)}"
+            print(error_message)
+            return ("Erro ao Obter Reviews do Estabelecimento")  # L
 
         # Clica no botão "Newest"
         try:
@@ -136,7 +142,9 @@ def handleGetReviews(id):
             newest_button.click()
         except Exception as e:
             driver.quit()
-            raise Exception(f"Erro ao Obter Reviews do Estabalecimento de Id ${id}. " + e)
+            error_message = f"Erro ao Obter Reviews do Estabelecimento de Id {id}. Erro: {str(e)}"
+            print(error_message)
+            return ("Erro ao Obter Reviews do Estabelecimento")  # L
 
         antigo = "a"
         contador = 0
@@ -207,4 +215,6 @@ def handleGetReviews(id):
         return dados
     except Exception as e:
         driver.quit()
-        raise Exception(f"Erro ao Obter Reviews do Estabalecimento de Id ${id}. " + e)
+        error_message = f"Erro ao Obter Reviews do Estabelecimento de Id {id}. Erro: {str(e)}"
+        print(error_message)
+        return ("Erro ao Obter Reviews do Estabelecimento")  # L
