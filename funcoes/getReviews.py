@@ -56,15 +56,14 @@ def getData(response, dados,driver):
         tempo = response[i][0][1][6]
         perfil = response[i][0][1][4][5][2][0]
         profile_data = {field: "null" for field in field_names}
+        estrelas = response[i][0][2][0][0]
         try:
             profile_data = getDataFromProfile(perfil,driver)
             
         except Exception as e:
             print(f"Erro ao Obter Contribuições do Perfil ${perfil}. " + e)
            
-        reviews = response[i][0][1][4][5][5]
-        fotos = response[i][0][1][4][5][6]
-        estrelas = response[i][0][2][0][0]
+
         try:
             avaliacao = str(response[i][0][2][15][0][0]).replace('\n', ' ')
         except IndexError:
@@ -74,9 +73,6 @@ def getData(response, dados,driver):
         "tempo": tempo,
         "estrelas": estrelas,
         "avaliacao": avaliacao,
-        "perfil": perfil,
-        "reviews": reviews,
-        "fotos": fotos,
         "local guide": profile_data[field_names[0]],
         "avaliacoes": profile_data[field_names[1]],
         "classificacoes": profile_data[field_names[2]],
