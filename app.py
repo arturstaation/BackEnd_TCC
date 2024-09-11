@@ -10,32 +10,32 @@ def getEstabelecimentos(nome):
    try:
     estabelecimentos, next_page = handleGetEstabelecimentos(nome)
     
-    return {
-        'establishments': estabelecimentos,
-        'next_page_token': next_page,
-        'hasError': False,
-    }
+    return jsonify({
+            'establishments': estabelecimentos,
+            'next_page_token': next_page,
+            'hasError': False,
+        })
    except Exception as e:
-      return {
-         'hasError': True,
-         'message': e
-      }
+        return jsonify({
+            'hasError': True,
+            'message': str(e)
+        }), 500 
 
 
 @app.route('/GetReviews/<place_id>', methods=['GET'])
 def getReview(place_id):
-   try:
+   try: 
     reviews = handleGetReviews(place_id)
-    return {
-        'total': len(reviews),
-        'reviews': reviews,
-        'hasError': False,
-    }
+    return jsonify({
+            'quantity': len(reviews),
+            'reviews': reviews,
+            'hasError': False,
+    })
    except Exception as e:
-    return {
-         'hasError': True,
-         'message': e
-    }
+    return jsonify({
+            'hasError': True,
+            'message': str(e)
+    }), 500  
     
 if __name__ == '__main__':
     app.run(debug=True)
