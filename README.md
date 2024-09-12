@@ -6,8 +6,9 @@ pip install pandas<br>
 pip install openpyxl<br>
 pip install base64<br>
 pip install io<br>
+pip install flask-cors<br>
 
 
 ### Rodar Codigo
-Criar arquivo variaveis.env na raiz da pasta e colocar um GOOGLE_PLACES_API_KEY = KEY<br>
+Criar arquivo variaveis.py na raiz da pasta e colocar um GOOGLE_PLACES_API_KEY = KEY<br>
 python app.py

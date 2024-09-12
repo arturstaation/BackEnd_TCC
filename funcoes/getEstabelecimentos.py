@@ -1,5 +1,5 @@
 import requests
-from loadVariables import GOOGLE_PLACES_API_KEY
+from variaveis import GOOGLE_PLACES_API_KEY
 def handleGetEstabelecimentos(nome):
 
     try:
@@ -21,10 +21,10 @@ def handleGetEstabelecimentos(nome):
         url = 'https://maps.googleapis.com/maps/api/place/textsearch/json'
         response = requests.get(url, params=params)
         result = response.json()
+        print(GOOGLE_PLACES_API_KEY)
+        if 'results' in result and not('error_message') in result:
 
-        if 'results' in result:
-
-
+            
             for results in result['results']:
                 place_info = {
                     "name": results.get("name"),
@@ -36,7 +36,10 @@ def handleGetEstabelecimentos(nome):
                 
                 all_results.append(place_info)
                 
-
+        else:
+            error_message = f"Erro ao Obter Estabelecimentos {nome}.Erro: {result}"
+            print(error_message)
+            return ("Erro ao Obter Estabelecimentos."),""
         # Verifica se há mais páginas de resultados disponíveis
         next_token = ""
         if('next_page_token' in  result):
@@ -44,8 +47,9 @@ def handleGetEstabelecimentos(nome):
 
 
         return all_results, next_token
+
     except Exception as e:
 
         error_message = f"Erro ao Obter Estabelecimentos {nome}. Erro: {str(e)}"
         print(error_message)
-        return ("Erro ao Obter Estabelecimentos")
+        return ("Erro ao Obter Estabelecimentos"),""
