@@ -21,7 +21,6 @@ def handleGetEstabelecimentos(nome):
         url = 'https://maps.googleapis.com/maps/api/place/textsearch/json'
         response = requests.get(url, params=params)
         result = response.json()
-        print(GOOGLE_PLACES_API_KEY)
         if 'results' in result and not('error_message') in result:
 
             

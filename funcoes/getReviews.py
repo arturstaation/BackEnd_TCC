@@ -9,7 +9,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 
-field_names = ['Local Guide', 'Avaliacoes','Classificacoes','Fotos','Videos','Legendas','Respostas','Edicoes','Informadas como Incorretas','Lugares Adicionadas', 'Estradas Adicionadas', 'Informacoes Verificadas', 'P/R']
+field_names = ['Avaliacoes','Classificacoes','Fotos','Videos','Legendas','Respostas','Edicoes','Informadas como Incorretas','Lugares Adicionadas', 'Estradas Adicionadas', 'Informacoes Verificadas', 'P/R']
 def getDataFromProfile(perfil,driver):  
     
     obj = {field: "null" for field in field_names}
@@ -20,10 +20,9 @@ def getDataFromProfile(perfil,driver):
             EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[1]/div/div[2]/div[2]/span"))
         )
         element_text = element.text
+        index = 0
         if "Local Guide" in element_text:
-            obj[field_names[0]] = True
-        else:
-            obj[field_names[0]] = False
+            index = 3
         
         
         contributions_button = WebDriverWait(driver, 5).until(
@@ -31,16 +30,15 @@ def getDataFromProfile(perfil,driver):
                 EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[1]/div/div[1]/div/img"))
             )
         contributions_button.click()
-        div = 1
-        if(obj[field_names[0]]):
-            div = 2
         painel = WebDriverWait(driver, 5).until(
-
+                                                             
+                                                            
                 EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[1]/div/div[2]/div/div[2]/div"))
         )
-        for i in range (1,13):             
-            fields = driver.find_element(By.XPATH, f"/html/body/div[2]/div[3]/div[1]/div/div[2]/div/div[2]/div/div/div[2]/div[{div}]/div/div[{i}]/span[3]")
-            obj[field_names[i]] = fields.text
+        painel_texto = painel.text.split('\n')
+        numeros = [item for item in painel_texto if item.replace('.', '', 1).isdigit()]
+        for i in range (0,12):             
+            obj[field_names[i]] = numeros[i+index]
         return obj
     except Exception as e:
         print(f"Erro ao Obter Dados do Perfil ${perfil}. " + e)
@@ -53,12 +51,21 @@ def getDataFromProfile(perfil,driver):
 def getData(response, dados,driver):
 
     for i in range(len(response)):
-        tempo = response[i][0][1][6]
-        perfil = response[i][0][1][4][5][2][0]
-        profile_data = {field: "null" for field in field_names}
-        estrelas = response[i][0][2][0][0]
         try:
-            profile_data = getDataFromProfile(perfil,driver)
+            tempo = response[i][0][1][6]
+        except:
+            tempo = "null";
+        try:
+            perfil = response[i][0][1][4][5][2][0]
+        except:
+            perfil = "null"
+        try:
+            estrelas = response[i][0][2][0][0]
+        except:
+            estrelas = "null"
+        try:
+            if(perfil != "null"):
+                profile_data = getDataFromProfile(perfil,driver)
             
         except Exception as e:
             print(f"Erro ao Obter Contribuições do Perfil ${perfil}. " + e)
@@ -73,19 +80,18 @@ def getData(response, dados,driver):
         "tempo": tempo,
         "estrelas": estrelas,
         "avaliacao": avaliacao,
-        "local guide": profile_data[field_names[0]],
-        "avaliacoes": profile_data[field_names[1]],
-        "classificacoes": profile_data[field_names[2]],
-        "fotos": profile_data[field_names[3]],
-        "videos": profile_data[field_names[4]],
-        "legendas": profile_data[field_names[5]],
-        "respostas": profile_data[field_names[6]],
-        "edicoes": profile_data[field_names[7]],
-        "informadas como incorretas": profile_data[field_names[8]],
-        "lugares adicionados": profile_data[field_names[9]],
-        "estradas adicionadas": profile_data[field_names[10]],
-        "informacoes verificadas": profile_data[field_names[11]],
-        "p/r": profile_data[field_names[12]]
+        "avaliacoes": profile_data[field_names[0]],
+        "classificacoes": profile_data[field_names[1]],
+        "fotos": profile_data[field_names[2]],
+        "videos": profile_data[field_names[3]],
+        "legendas": profile_data[field_names[4]],
+        "respostas": profile_data[field_names[5]],
+        "edicoes": profile_data[field_names[6]],
+        "informadas como incorretas": profile_data[field_names[7]],
+        "lugares adicionados": profile_data[field_names[8]],
+        "estradas adicionadas": profile_data[field_names[9]],
+        "informacoes verificadas": profile_data[field_names[10]],
+        "p/r": profile_data[field_names[11]]
         }
 
 
@@ -144,7 +150,7 @@ def handleGetReviews(id):
             print(error_message)
             return ("Erro ao Obter Reviews do Estabelecimento")  # L
 
-        antigo = "a"
+        antigo = ""
         contador = 0
         numero_reviews = wait.until(EC.presence_of_element_located((By.XPATH, '/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[2]/div[2]/div/div[2]/div[3]'))).text.split(' ')
         num = int(numero_reviews[0].replace(".", ""))
@@ -194,9 +200,11 @@ def handleGetReviews(id):
             contador = 0
             while token_atual is not None:
                 response = json.loads(requests.get(url).text[5:].encode('utf-8', 'ignore').decode('utf-8'))
+                
                 if response[0] is None:
                     token_proximo = response[1]
                     getData(response[2], dados,driver)
+
                     if token_proximo is not None:
                         token_proximo = token_proximo.replace("=", "%3D")
                         url = url.replace(token_atual, token_proximo)
@@ -204,15 +212,19 @@ def handleGetReviews(id):
                 else:
                     break
         else:
-            for i in range(len(xhr_requests)):
-                if "listugcposts" in xhr_requests[i]:
-                    url = xhr_requests[i]
-            response = json.loads(requests.get(url).text[5:].encode('utf-8', 'ignore').decode('utf-8'))
-            getData(response[2], dados,driver)
+            if(num != 0):
+                for i in range(len(xhr_requests)):
+                    if "listugcposts" in xhr_requests[i]:
+                        url = xhr_requests[i]
+                response = json.loads(requests.get(url).text[5:].encode('utf-8', 'ignore').decode('utf-8'))
+                getData(response[2], dados,driver)
+            else:
+                return []
         driver.quit()
         return dados
     except Exception as e:
         driver.quit()
+        print(response)
         error_message = f"Erro ao Obter Reviews do Estabelecimento de Id {id}. Erro: {str(e)}"
         print(error_message)
         return ("Erro ao Obter Reviews do Estabelecimento")  # L
