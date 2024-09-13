@@ -73,7 +73,6 @@ def getReviewsExcel(place_id):
    try: 
     
     reviews = handleGetReviews(place_id)
-
     if not (isinstance(reviews, str)):
         output = BytesIO()
         

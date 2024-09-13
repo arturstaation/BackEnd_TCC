@@ -13,33 +13,52 @@ field_names = ['Avaliacoes','Classificacoes','Fotos','Videos','Legendas','Respos
 def getDataFromProfile(perfil,driver):  
     
     obj = {field: "null" for field in field_names}
-
+    obj['Local Guide'] = "null"
     driver.get(perfil)
     try:
-        element = WebDriverWait(driver, 5).until(
-            EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[1]/div/div[2]/div[2]/span"))
-        )
-        element_text = element.text
-        index = 0
-        if "Local Guide" in element_text:
-            index = 3
-        
-        
+
         contributions_button = WebDriverWait(driver, 5).until(
 
                 EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[1]/div/div[1]/div/img"))
             )
+        
         contributions_button.click()
-        painel = WebDriverWait(driver, 5).until(
-                                                             
-                                                            
+        painel = WebDriverWait(driver, 5).until(                                           
                 EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[1]/div/div[2]/div/div[2]/div"))
         )
-        painel_texto = painel.text.split('\n')
+        try:
+            painel_texto = painel.text.split('\n')
+        except:
+            time.sleep(100)
+            print(f"Erro ao Obter Dados do Perfil ${perfil}. " + e)
+            return obj
+        
         numeros = [item for item in painel_texto if item.replace('.', '', 1).isdigit()]
-        for i in range (0,12):             
-            obj[field_names[i]] = numeros[i+index]
-        return obj
+
+        obj['Local Guide'] = False
+        index = 0
+        div = 1
+        if(len(numeros) > len(field_names)):
+            obj['Local Guide'] = True
+            index = 3
+            div = 2
+
+        if(len(numeros) == len(field_names) or len(numeros)-3 == len(field_names)):
+            for i in range (0,len(field_names)):      
+                obj[field_names[i]] = numeros[i+index]
+            return obj
+        else:
+            if(len(numeros) == len(field_names)-1 or len(numeros)-3 == len(field_names)-1):
+                for i in range (0,len(numeros)-1):             
+                    obj[field_names[i]] = numeros[i+index]
+                obj['P/R'] = obj['Informacoes Verificadas']
+                obj['Informacoes Verificadas'] = obj['Estradas Adicionadas'] 
+                fields = driver.find_element(By.XPATH, f"/html/body/div[2]/div[3]/div[1]/div/div[2]/div/div[2]/div/div/div[2]/div[{div}]/div/div[10]/span[3]")
+                obj['Estradas Adicionadas'] = fields.text
+                return obj
+            else:
+                print(f"Erro ao Obter Dados do Perfil ${perfil}. " + e)
+                return obj
     except Exception as e:
         print(f"Erro ao Obter Dados do Perfil ${perfil}. " + e)
         return obj
@@ -49,37 +68,40 @@ def getDataFromProfile(perfil,driver):
     
 
 def getData(response, dados,driver):
-
+    profile_data = {field: "null" for field in field_names}
     for i in range(len(response)):
         try:
             tempo = response[i][0][1][6]
         except:
-            tempo = "null";
+            tempo = "null"
+
         try:
             perfil = response[i][0][1][4][5][2][0]
         except:
             perfil = "null"
+            
         try:
             estrelas = response[i][0][2][0][0]
         except:
             estrelas = "null"
+            
         try:
             if(perfil != "null"):
                 profile_data = getDataFromProfile(perfil,driver)
             
         except Exception as e:
             print(f"Erro ao Obter Contribuições do Perfil ${perfil}. " + e)
-           
 
         try:
             avaliacao = str(response[i][0][2][15][0][0]).replace('\n', ' ')
         except IndexError:
             avaliacao = "null"
-
+            
         data = {
         "tempo": tempo,
         "estrelas": estrelas,
         "avaliacao": avaliacao,
+        "local guide": profile_data['Local Guide'],
         "avaliacoes": profile_data[field_names[0]],
         "classificacoes": profile_data[field_names[1]],
         "fotos": profile_data[field_names[2]],
@@ -89,11 +111,10 @@ def getData(response, dados,driver):
         "edicoes": profile_data[field_names[6]],
         "informadas como incorretas": profile_data[field_names[7]],
         "lugares adicionados": profile_data[field_names[8]],
-        "estradas adicionadas": profile_data[field_names[9]],
+        "lugares adicionados": profile_data[field_names[9]],
         "informacoes verificadas": profile_data[field_names[10]],
         "p/r": profile_data[field_names[11]]
         }
-
 
         dados.append(data)
         
@@ -124,7 +145,7 @@ def handleGetReviews(id):
             driver.quit()
             error_message = f"Erro ao Obter Reviews do Estabelecimento de Id {id}. Erro: {str(e)}"
             print(error_message)
-            return ("Erro ao Obter Reviews do Estabelecimento")  # Levanta a exceção novamente com a mensagem formatada
+            return ("Erro ao Obter Reviews do Estabelecimento")
 
         # Clica no botão "Sort"
         try:
@@ -136,7 +157,7 @@ def handleGetReviews(id):
             driver.quit()
             error_message = f"Erro ao Obter Reviews do Estabelecimento de Id {id}. Erro: {str(e)}"
             print(error_message)
-            return ("Erro ao Obter Reviews do Estabelecimento")  # L
+            return ("Erro ao Obter Reviews do Estabelecimento")
 
         # Clica no botão "Newest"
         try:
@@ -204,7 +225,6 @@ def handleGetReviews(id):
                 if response[0] is None:
                     token_proximo = response[1]
                     getData(response[2], dados,driver)
-
                     if token_proximo is not None:
                         token_proximo = token_proximo.replace("=", "%3D")
                         url = url.replace(token_atual, token_proximo)
@@ -224,7 +244,6 @@ def handleGetReviews(id):
         return dados
     except Exception as e:
         driver.quit()
-        print(response)
         error_message = f"Erro ao Obter Reviews do Estabelecimento de Id {id}. Erro: {str(e)}"
         print(error_message)
-        return ("Erro ao Obter Reviews do Estabelecimento")  # L
+        return ("Erro ao Obter Reviews do Estabelecimento") 

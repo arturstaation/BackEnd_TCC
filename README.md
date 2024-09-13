@@ -4,8 +4,6 @@ pip install python-dotenv<br>
 pip install selenium<br>
 pip install pandas<br>
 pip install openpyxl<br>
-pip install base64<br>
-pip install io<br>
 pip install flask-cors<br>
 
 
