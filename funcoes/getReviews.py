@@ -8,10 +8,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
-
+ultimo_intervalo = -1
 reviews_analisadas = 0
 field_names = ['Avaliacoes','Classificacoes','Fotos','Videos','Legendas','Respostas','Edicoes','Informadas como Incorretas','Lugares Adicionadas', 'Estradas Adicionadas', 'Informacoes Verificadas', 'P/R']
 def getDataFromProfile(perfil,driver):  
+    global ultimo_intervalo
     global field_names
     obj = {field: "null" for field in field_names}
     obj['Local Guide'] = "null"
@@ -120,8 +121,13 @@ def getData(response, dados,driver,num,id):
         }
 
         dados.append(data)
-        if((((reviews_analisadas/num)*100)%10) == 0):
-            print(f"{(((reviews_analisadas/num)*100)%10)}% reviews processadas do estabelecimento {id}")
+        percent = (reviews_analisadas / num) * 100
+            
+        percent_rounded = int(percent // 10) * 10
+        
+        if (percent_rounded != ultimo_print):
+            print(f"{percent_rounded}% reviews processadas do estabelecimento {id}")
+            ultimo_print = percent_rounded  
         
 
 def handleGetReviews(id):
