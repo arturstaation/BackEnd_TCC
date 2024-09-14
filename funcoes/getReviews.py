@@ -9,9 +9,10 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 
+reviews_analisadas = 0
 field_names = ['Avaliacoes','Classificacoes','Fotos','Videos','Legendas','Respostas','Edicoes','Informadas como Incorretas','Lugares Adicionadas', 'Estradas Adicionadas', 'Informacoes Verificadas', 'P/R']
 def getDataFromProfile(perfil,driver):  
-    
+    global field_names
     obj = {field: "null" for field in field_names}
     obj['Local Guide'] = "null"
     driver.get(perfil)
@@ -43,13 +44,13 @@ def getDataFromProfile(perfil,driver):
         if(len(numeros) == len(field_names) or len(numeros)-3 == len(field_names)):
             for i in range (0,len(field_names)):     
                 print(i,i+index) 
-                obj[field_names[i]] = numeros[i+index]
+                obj[field_names[i]] = int(numeros[i+index])
             return obj
         else:
             if(len(numeros) == len(field_names)-1 or len(numeros)-3 == len(field_names)-1):
                 for i in range (0,len(field_names)-1):     
                     print(i,i+index)          
-                    obj[field_names[i]] = numeros[i+index]
+                    obj[field_names[i]] = int(numeros[i+index])
                 obj['P/R'] = obj['Informacoes Verificadas']
                 obj['Informacoes Verificadas'] = obj['Estradas Adicionadas'] 
                 fields = driver.find_element(By.XPATH, f"/html/body/div[2]/div[3]/div[1]/div/div[2]/div/div[2]/div/div/div[2]/div[{div}]/div/div[10]/span[3]")
@@ -66,9 +67,12 @@ def getDataFromProfile(perfil,driver):
     
     
 
-def getData(response, dados,driver):
+def getData(response, dados,driver,num,id):
+    global reviews_analisadas
     profile_data = {field: "null" for field in field_names}
     for i in range(len(response)):
+        reviews_analisadas+=1
+        print(reviews_analisadas)
         try:
             tempo = response[i][0][1][6]
         except:
@@ -116,9 +120,13 @@ def getData(response, dados,driver):
         }
 
         dados.append(data)
+        if((((reviews_analisadas/num)*100)%10) == 0):
+            print(f"{(((reviews_analisadas/num)*100)%10)}% reviews processadas do estabelecimento {id}")
         
 
 def handleGetReviews(id):
+    global reviews_analisadas
+    reviews_analisadas = 0
     try:
         chrome_options = Options()
         '''
@@ -214,7 +222,7 @@ def handleGetReviews(id):
             response = json.loads(requests.get(antigo).text[5:].encode('utf-8', 'ignore').decode('utf-8'))
             token_atual = response[1]
             token_atual = token_atual.replace("=", "%3D")
-            getData(response[2], dados,driver)
+            getData(response[2], dados,driver, num,id)
 
             token_proximo = None
             contador = 0
@@ -223,7 +231,7 @@ def handleGetReviews(id):
                 
                 if response[0] is None:
                     token_proximo = response[1]
-                    getData(response[2], dados,driver)
+                    getData(response[2], dados,driver,num,id)
                     if token_proximo is not None:
                         token_proximo = token_proximo.replace("=", "%3D")
                         url = url.replace(token_atual, token_proximo)
@@ -236,7 +244,7 @@ def handleGetReviews(id):
                     if "listugcposts" in xhr_requests[i]:
                         url = xhr_requests[i]
                 response = json.loads(requests.get(url).text[5:].encode('utf-8', 'ignore').decode('utf-8'))
-                getData(response[2], dados,driver)
+                getData(response[2], dados,driver,num,id)
             else:
                 return []
         driver.quit()
