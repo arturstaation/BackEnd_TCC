@@ -43,12 +43,12 @@ def getDataFromProfile(perfil,driver):
 
         if(len(numeros) == len(field_names) or len(numeros)-3 == len(field_names)):
             for i in range (0,len(field_names)):     
-                obj[field_names[i]] = int(numeros[i+index])
+                obj[field_names[i]] = int(numeros[i+index].replace('.', '', 1))
             return obj
         else:
             if(len(numeros) == len(field_names)-1 or len(numeros)-3 == len(field_names)-1):
                 for i in range (0,len(field_names)-1):             
-                    obj[field_names[i]] = int(numeros[i+index])
+                    obj[field_names[i]] = int(numeros[i+index].replace('.', '', 1))
                 obj['P/R'] = obj['Informacoes Verificadas']
                 obj['Informacoes Verificadas'] = obj['Estradas Adicionadas'] 
                 fields = driver.find_element(By.XPATH, f"/html/body/div[2]/div[3]/div[1]/div/div[2]/div/div[2]/div/div/div[2]/div[{div}]/div/div[10]/span[3]")
@@ -58,6 +58,14 @@ def getDataFromProfile(perfil,driver):
                 print(f"Erro ao Obter Dados do Perfil ${perfil}. Erro: {str(e)}")
                 return obj
     except Exception as e:
+        try:
+            fields = driver.find_element(By.XPATH, "/html/body/div[1]/div/text()[1]")
+            if("Nossos sistemas detectaram tráfego incomum na sua rede de computadores" in fields.text):
+                print(f"Erro ao Obter Dados do Perfil ${perfil}. Erro: Detectado como Bot")
+                return obj
+        except Exception as e:
+            print(f"Erro ao Obter Dados do Perfil ${perfil}. Erro: {str(e)}")
+            return obj
         print(f"Erro ao Obter Dados do Perfil ${perfil}. Erro: {str(e)}")
         return obj
 
@@ -131,13 +139,13 @@ def getData(response, dados,driver,num,id):
 def handleGetReviews(id):
     global reviews_analisadas
     reviews_analisadas = 0
+    headless = False
     try:
         chrome_options = Options()
-        #'''
-        chrome_options.add_argument("--headless")  # Executa em modo headless
-        chrome_options.add_argument("--disable-gpu")  # Desativa a GPU, útil para ambientes headless
-        chrome_options.add_argument("--no-sandbox")  # Necessário para rodar em alguns ambientes
-        #'''
+        if(headless):
+            chrome_options.add_argument("--headless")  # Executa em modo headless
+            chrome_options.add_argument("--disable-gpu")  # Desativa a GPU, útil para ambientes headless
+            chrome_options.add_argument("--no-sandbox")  # Necessário para rodar em alguns ambientes
         driver = webdriver.Chrome(options=chrome_options)
         actions = ActionChains(driver)
         MAX_WAIT_TIME = 0  
