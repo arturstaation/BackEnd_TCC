@@ -58,10 +58,10 @@ def getDataFromProfile(perfil,driver):
                 obj['Estradas Adicionadas'] = fields.text
                 return obj
             else:
-                print(f"Erro ao Obter Dados do Perfil ${perfil}. " + e)
+                print(f"Erro ao Obter Dados do Perfil ${perfil}. Erro: {str(e)}")
                 return obj
     except Exception as e:
-        print(f"Erro ao Obter Dados do Perfil ${perfil}. " + e)
+        print(f"Erro ao Obter Dados do Perfil ${perfil}. Erro: {str(e)}")
         return obj
 
 
@@ -94,7 +94,7 @@ def getData(response, dados,driver,num,id):
                 profile_data = getDataFromProfile(perfil,driver)
             
         except Exception as e:
-            print(f"Erro ao Obter Contribuições do Perfil ${perfil}. " + e)
+            print(f"Erro ao Obter Contribuições do Perfil ${perfil}. Erro: {str(e)}")
 
         try:
             avaliacao = str(response[i][0][2][15][0][0]).replace('\n', ' ')
@@ -182,7 +182,7 @@ def handleGetReviews(id):
             driver.quit()
             error_message = f"Erro ao Obter Reviews do Estabelecimento de Id {id}. Erro: {str(e)}"
             print(error_message)
-            return ("Erro ao Obter Reviews do Estabelecimento")  # L
+            return ("Erro ao Obter Reviews do Estabelecimento")  
 
         antigo = ""
         contador = 0
