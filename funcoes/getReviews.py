@@ -11,6 +11,16 @@ from selenium.webdriver.common.action_chains import ActionChains
 ultimo_intervalo = -1
 reviews_analisadas = 0
 field_names = ['Avaliacoes','Classificacoes','Fotos','Videos','Legendas','Respostas','Edicoes','Informadas como Incorretas','Lugares Adicionadas', 'Estradas Adicionadas', 'Informacoes Verificadas', 'P/R']
+def initDriver(headless):
+    chrome_options = Options()
+    chrome_options.add_argument("--disable-gpu")  # Desativa a GPU, útil para ambientes headless
+    chrome_options.add_argument("--disable-software-rasterizer")
+    chrome_options.add_argument("--no-sandbox")  # Necessário para rodar em alguns ambientes
+    chrome_options.add_argument("--disable-gpu-sandbox")
+    if(headless):
+        chrome_options.add_argument("--headless")  # Executa em modo headless
+    driver = webdriver.Chrome(options=chrome_options)
+    return driver
 def getDataFromProfile(perfil,driver):  
     global ultimo_intervalo
     global field_names
@@ -55,85 +65,69 @@ def getDataFromProfile(perfil,driver):
                 obj['Estradas Adicionadas'] = fields.text
                 return obj
             else:
-                print(f"Erro ao Obter Dados do Perfil ${perfil}. Erro: {str(e)}")
-                return obj
+                raise Exception("Dados Incompletos")
     except Exception as e:
         try:
             fields = driver.find_element(By.XPATH, "/html/body/div[1]/div")
             if("Nossos sistemas detectaram tráfego incomum na sua rede de computadores" in fields.text):
-                print(f"Erro ao Obter Dados do Perfil ${perfil}. Erro: Detectado como Bot")
-                raise Exception("Detectado como Bot")
+                raise Exception(f"Detectado como Bot")
         except Exception as e:
-            print(f"Erro ao Obter Dados do Perfil ${perfil}. Erro: {str(e)}")
             raise Exception(str(e))
-        print(f"Erro ao Obter Dados do Perfil ${perfil}. Erro: {str(e)}")
         raise Exception(str(e))
 
 
     
     
-
-def getData(response, dados,driver,num,id):
+def getData(response, dados, driver, num, id):
     global ultimo_intervalo
     global reviews_analisadas
     profile_data = {field: "null" for field in field_names}
     try:
         for i in range(len(response)):
-            reviews_analisadas+=1
-            print(reviews_analisadas)
-        
+            reviews_analisadas += 1
+
             tempo = response[i][0][1][6]
-
-
-
             perfil = response[i][0][1][4][5][2][0]
-
-            
-        
             estrelas = response[i][0][2][0][0]
+            
             try:
                 avaliacao = str(response[i][0][2][15][0][0]).replace('\n', ' ')
             except IndexError:
                 avaliacao = "null"
 
-            
-            if(perfil != "null"):
-                profile_data = getDataFromProfile(perfil,driver)
-                
+            if perfil != "null":
+                profile_data = getDataFromProfile(perfil, driver)
 
-
-                
             data = {
-            "tempo": tempo,
-            "estrelas": estrelas,
-            "avaliacao": avaliacao,
-            "local guide": profile_data['Local Guide'],
-            "avaliacoes": profile_data[field_names[0]],
-            "classificacoes": profile_data[field_names[1]],
-            "fotos": profile_data[field_names[2]],
-            "videos": profile_data[field_names[3]],
-            "legendas": profile_data[field_names[4]],
-            "respostas": profile_data[field_names[5]],
-            "edicoes": profile_data[field_names[6]],
-            "informadas como incorretas": profile_data[field_names[7]],
-            "lugares adicionados": profile_data[field_names[8]],
-            "lugares adicionados": profile_data[field_names[9]],
-            "informacoes verificadas": profile_data[field_names[10]],
-            "p/r": profile_data[field_names[11]]
+                "tempo": tempo,
+                "estrelas": estrelas,
+                "avaliacao": avaliacao,
+                "local guide": profile_data['Local Guide'],
+                "avaliacoes": profile_data[field_names[0]],
+                "classificacoes": profile_data[field_names[1]],
+                "fotos": profile_data[field_names[2]],
+                "videos": profile_data[field_names[3]],
+                "legendas": profile_data[field_names[4]],
+                "respostas": profile_data[field_names[5]],
+                "edicoes": profile_data[field_names[6]],
+                "informadas como incorretas": profile_data[field_names[7]],
+                "lugares adicionados": profile_data[field_names[8]],
+                "informacoes verificadas": profile_data[field_names[10]],
+                "p/r": profile_data[field_names[11]]
             }
 
             dados.append(data)
             percent = (reviews_analisadas / num) * 100
-                
             percent_rounded = int(percent // 10) * 10
-            
-            if (percent_rounded != ultimo_intervalo):
+
+            if percent_rounded != ultimo_intervalo:
                 print(f"{percent_rounded}% reviews processadas do estabelecimento {id}")
-                ultimo_intervalo = percent_rounded  
+                ultimo_intervalo = percent_rounded
     except Exception as e:
-        error_message = f"Erro ao obter dados das reviews do estabelecimento {id}. Erro: {str(e)}"
-        print(error_message)
-        raise Exception(error_message)
+        if "Detectado como Bot" in str(e):
+            print(str(e) + f" na Review {reviews_analisadas}")
+        raise Exception(str(e))
+
         
 
 def handleGetReviews(id):
@@ -141,21 +135,13 @@ def handleGetReviews(id):
     reviews_analisadas = 0
     headless = True
     try:
-        chrome_options = Options()
-        chrome_options.add_argument("--disable-gpu")  # Desativa a GPU, útil para ambientes headless
-        chrome_options.add_argument("--disable-software-rasterizer")
-        chrome_options.add_argument("--no-sandbox")  # Necessário para rodar em alguns ambientes
-        chrome_options.add_argument("--disable-gpu-sandbox")
-        if(headless):
-            chrome_options.add_argument("--headless")  # Executa em modo headless
-        driver = webdriver.Chrome(options=chrome_options)
-        actions = ActionChains(driver)
-        MAX_WAIT_TIME = 0  
-        dados = []
-        wait = WebDriverWait(driver, MAX_WAIT_TIME)
+        driver = initDriver(headless)
         url = f'https://www.google.com/maps/place/?q=place_id:{id}'
         driver.get(url)
+        dados = []
 
+        actions = ActionChains(driver) 
+        wait = WebDriverWait(driver, 0)
         # Clica no botão "Avaliações" (Reviews)
         
         reviews_button = WebDriverWait(driver, 2).until(
