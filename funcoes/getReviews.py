@@ -59,15 +59,15 @@ def getDataFromProfile(perfil,driver):
                 return obj
     except Exception as e:
         try:
-            fields = driver.find_element(By.XPATH, "/html/body/div[1]/div/text()[1]")
+            fields = driver.find_element(By.XPATH, "/html/body/div[1]/div")
             if("Nossos sistemas detectaram tráfego incomum na sua rede de computadores" in fields.text):
                 print(f"Erro ao Obter Dados do Perfil ${perfil}. Erro: Detectado como Bot")
-                return obj
+                raise Exception("Detectado como Bot")
         except Exception as e:
             print(f"Erro ao Obter Dados do Perfil ${perfil}. Erro: {str(e)}")
-            return obj
+            raise Exception(str(e))
         print(f"Erro ao Obter Dados do Perfil ${perfil}. Erro: {str(e)}")
-        return obj
+        raise Exception(str(e))
 
 
     
@@ -77,69 +77,69 @@ def getData(response, dados,driver,num,id):
     global ultimo_intervalo
     global reviews_analisadas
     profile_data = {field: "null" for field in field_names}
-    for i in range(len(response)):
-        reviews_analisadas+=1
-        print(reviews_analisadas)
-        try:
+    try:
+        for i in range(len(response)):
+            reviews_analisadas+=1
+            print(reviews_analisadas)
+        
             tempo = response[i][0][1][6]
-        except:
-            tempo = "null"
 
-        try:
+
+
             perfil = response[i][0][1][4][5][2][0]
-        except:
-            perfil = "null"
+
             
-        try:
+        
             estrelas = response[i][0][2][0][0]
-        except:
-            estrelas = "null"
+            try:
+                avaliacao = str(response[i][0][2][15][0][0]).replace('\n', ' ')
+            except IndexError:
+                avaliacao = "null"
+
             
-        try:
             if(perfil != "null"):
                 profile_data = getDataFromProfile(perfil,driver)
-            
-        except Exception as e:
-            print(f"Erro ao Obter Contribuições do Perfil ${perfil}. Erro: {str(e)}")
+                
 
-        try:
-            avaliacao = str(response[i][0][2][15][0][0]).replace('\n', ' ')
-        except IndexError:
-            avaliacao = "null"
-            
-        data = {
-        "tempo": tempo,
-        "estrelas": estrelas,
-        "avaliacao": avaliacao,
-        "local guide": profile_data['Local Guide'],
-        "avaliacoes": profile_data[field_names[0]],
-        "classificacoes": profile_data[field_names[1]],
-        "fotos": profile_data[field_names[2]],
-        "videos": profile_data[field_names[3]],
-        "legendas": profile_data[field_names[4]],
-        "respostas": profile_data[field_names[5]],
-        "edicoes": profile_data[field_names[6]],
-        "informadas como incorretas": profile_data[field_names[7]],
-        "lugares adicionados": profile_data[field_names[8]],
-        "lugares adicionados": profile_data[field_names[9]],
-        "informacoes verificadas": profile_data[field_names[10]],
-        "p/r": profile_data[field_names[11]]
-        }
 
-        dados.append(data)
-        percent = (reviews_analisadas / num) * 100
+                
+            data = {
+            "tempo": tempo,
+            "estrelas": estrelas,
+            "avaliacao": avaliacao,
+            "local guide": profile_data['Local Guide'],
+            "avaliacoes": profile_data[field_names[0]],
+            "classificacoes": profile_data[field_names[1]],
+            "fotos": profile_data[field_names[2]],
+            "videos": profile_data[field_names[3]],
+            "legendas": profile_data[field_names[4]],
+            "respostas": profile_data[field_names[5]],
+            "edicoes": profile_data[field_names[6]],
+            "informadas como incorretas": profile_data[field_names[7]],
+            "lugares adicionados": profile_data[field_names[8]],
+            "lugares adicionados": profile_data[field_names[9]],
+            "informacoes verificadas": profile_data[field_names[10]],
+            "p/r": profile_data[field_names[11]]
+            }
+
+            dados.append(data)
+            percent = (reviews_analisadas / num) * 100
+                
+            percent_rounded = int(percent // 10) * 10
             
-        percent_rounded = int(percent // 10) * 10
-        
-        if (percent_rounded != ultimo_intervalo):
-            print(f"{percent_rounded}% reviews processadas do estabelecimento {id}")
-            ultimo_intervalo = percent_rounded  
+            if (percent_rounded != ultimo_intervalo):
+                print(f"{percent_rounded}% reviews processadas do estabelecimento {id}")
+                ultimo_intervalo = percent_rounded  
+    except Exception as e:
+        error_message = f"Erro ao obter dados das reviews do estabelecimento {id}. Erro: {str(e)}"
+        print(error_message)
+        raise Exception(error_message)
         
 
 def handleGetReviews(id):
     global reviews_analisadas
     reviews_analisadas = 0
-    headless = False
+    headless = True
     try:
         chrome_options = Options()
         if(headless):
@@ -155,40 +155,28 @@ def handleGetReviews(id):
         driver.get(url)
 
         # Clica no botão "Avaliações" (Reviews)
-        try:
-            reviews_button = WebDriverWait(driver, 2).until(
-                EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[3]/div/div/button[2]"))
-            )
-            reviews_button.click()
-        except Exception as e:
-            driver.quit()
-            error_message = f"Erro ao Obter Reviews do Estabelecimento de Id {id}. Erro: {str(e)}"
-            print(error_message)
-            return ("Erro ao Obter Reviews do Estabelecimento")
+        
+        reviews_button = WebDriverWait(driver, 2).until(
+            EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[3]/div/div/button[2]"))
+        )
+        reviews_button.click()
+
 
         # Clica no botão "Sort"
-        try:
-            sort_button = WebDriverWait(driver, 2).until(
-                EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[2]/div[7]/div[2]/button"))
-            )
-            sort_button.click()
-        except Exception as e:
-            driver.quit()
-            error_message = f"Erro ao Obter Reviews do Estabelecimento de Id {id}. Erro: {str(e)}"
-            print(error_message)
-            return ("Erro ao Obter Reviews do Estabelecimento")
+
+        sort_button = WebDriverWait(driver, 2).until(
+            EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[2]/div[7]/div[2]/button"))
+        )
+        sort_button.click()
+
 
         # Clica no botão "Newest"
-        try:
-            newest_button = WebDriverWait(driver, 2).until(
-                EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[3]/div[1]/div[2]"))
-            )
-            newest_button.click()
-        except Exception as e:
-            driver.quit()
-            error_message = f"Erro ao Obter Reviews do Estabelecimento de Id {id}. Erro: {str(e)}"
-            print(error_message)
-            return ("Erro ao Obter Reviews do Estabelecimento")  
+        
+        newest_button = WebDriverWait(driver, 2).until(
+            EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[3]/div[1]/div[2]"))
+        )
+        newest_button.click()
+
 
         antigo = ""
         contador = 0
