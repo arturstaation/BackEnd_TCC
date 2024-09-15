@@ -142,10 +142,12 @@ def handleGetReviews(id):
     headless = True
     try:
         chrome_options = Options()
+        chrome_options.add_argument("--disable-gpu")  # Desativa a GPU, útil para ambientes headless
+        chrome_options.add_argument("--disable-software-rasterizer")
+        chrome_options.add_argument("--no-sandbox")  # Necessário para rodar em alguns ambientes
+        chrome_options.add_argument("--disable-gpu-sandbox")
         if(headless):
             chrome_options.add_argument("--headless")  # Executa em modo headless
-            chrome_options.add_argument("--disable-gpu")  # Desativa a GPU, útil para ambientes headless
-            chrome_options.add_argument("--no-sandbox")  # Necessário para rodar em alguns ambientes
         driver = webdriver.Chrome(options=chrome_options)
         actions = ActionChains(driver)
         MAX_WAIT_TIME = 0  
