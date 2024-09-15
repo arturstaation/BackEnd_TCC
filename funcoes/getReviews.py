@@ -32,7 +32,6 @@ def getDataFromProfile(perfil,driver):
         painel_texto = painel.text.split('\n')
         
         numeros = [item for item in painel_texto if item.replace('.', '', 1).isdigit()]
-        print(numeros)
 
         obj['Local Guide'] = "False"
         index = 0
@@ -44,13 +43,11 @@ def getDataFromProfile(perfil,driver):
 
         if(len(numeros) == len(field_names) or len(numeros)-3 == len(field_names)):
             for i in range (0,len(field_names)):     
-                print(i,i+index) 
                 obj[field_names[i]] = int(numeros[i+index])
             return obj
         else:
             if(len(numeros) == len(field_names)-1 or len(numeros)-3 == len(field_names)-1):
-                for i in range (0,len(field_names)-1):     
-                    print(i,i+index)          
+                for i in range (0,len(field_names)-1):             
                     obj[field_names[i]] = int(numeros[i+index])
                 obj['P/R'] = obj['Informacoes Verificadas']
                 obj['Informacoes Verificadas'] = obj['Estradas Adicionadas'] 
@@ -69,6 +66,7 @@ def getDataFromProfile(perfil,driver):
     
 
 def getData(response, dados,driver,num,id):
+    global ultimo_intervalo
     global reviews_analisadas
     profile_data = {field: "null" for field in field_names}
     for i in range(len(response)):
@@ -125,9 +123,9 @@ def getData(response, dados,driver,num,id):
             
         percent_rounded = int(percent // 10) * 10
         
-        if (percent_rounded != ultimo_print):
+        if (percent_rounded != ultimo_intervalo):
             print(f"{percent_rounded}% reviews processadas do estabelecimento {id}")
-            ultimo_print = percent_rounded  
+            ultimo_intervalo = percent_rounded  
         
 
 def handleGetReviews(id):
@@ -135,11 +133,11 @@ def handleGetReviews(id):
     reviews_analisadas = 0
     try:
         chrome_options = Options()
-        '''
+        #'''
         chrome_options.add_argument("--headless")  # Executa em modo headless
         chrome_options.add_argument("--disable-gpu")  # Desativa a GPU, útil para ambientes headless
         chrome_options.add_argument("--no-sandbox")  # Necessário para rodar em alguns ambientes
-        '''
+        #'''
         driver = webdriver.Chrome(options=chrome_options)
         actions = ActionChains(driver)
         MAX_WAIT_TIME = 0  
@@ -256,7 +254,6 @@ def handleGetReviews(id):
         driver.quit()
         return dados
     except Exception as e:
-        time.sleep(100)
         driver.quit()
         error_message = f"Erro ao Obter Reviews do Estabelecimento de Id {id}. Erro: {str(e)}"
         print(error_message)
