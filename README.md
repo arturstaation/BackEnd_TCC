@@ -5,9 +5,12 @@ pip install selenium<br>
 pip install pandas<br>
 pip install openpyxl<br>
 pip install flask-cors<br>
-pip install anticaptchaofficial<br>
+pip install openai<br>
 
 
 ### Rodar Codigo
-Criar arquivo variaveis.py na raiz da pasta e colocar um GOOGLE_PLACES_API_KEY = KEY<br>
+Criar arquivo variaveis.py na raiz da pasta<br>
+Colocar no arquivo variaveis.py GOOGLE_PLACES_API_KEY = KEY<br>
+Colocar no arquivo variaveis.py OPENAI_API_KEY = KEY<br>
+
 python app.py

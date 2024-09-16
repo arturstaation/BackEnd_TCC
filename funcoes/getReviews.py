@@ -8,32 +8,64 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
-from anticaptchaofficial.recaptchav2proxyless import *
-from variaveis import ANTCAPTCHA_API_KEY
+import requests
+import openai
+from variaveis import OPENAI_API_KEY
 
-solver = recaptchaV2Proxyless()
-solver.set_verbose(1)
-solver.set_key(ANTCAPTCHA_API_KEY)
+
+
+openai.api_key = OPENAI_API_KEY
+
 
 ultimo_intervalo = -1
 reviews_analisadas = 0
 field_names = ['Avaliacoes','Classificacoes','Fotos','Videos','Legendas','Respostas','Edicoes','Informadas como Incorretas','Lugares Adicionadas', 'Estradas Adicionadas', 'Informacoes Verificadas', 'P/R']
 
+def transcribe(url):
+    print("Transcrevendo")
+    # Baixar o arquivo de áudio
+    with open('.temp', 'wb') as f:
+        f.write(requests.get(url).content)
+    
+    # Abrir o arquivo para envio
+    with open('.temp', 'rb') as audio_file:
+        # Fazer a transcrição usando o modelo Whisper
+        transcription = openai.Audio.transcribe(
+            model="whisper-1", 
+            file=audio_file,
+            response_format="text"
+        )
+    
+    return transcription["text"].strip()
+
+def click_checkbox(driver):
+    print("Abrindo Captcha")
+    driver.switch_to.frame(driver.find_element(By.XPATH, "/html/body/div[1]/form/div/div/div/iframe"))
+    captcha = driver.find_element(By.XPATH, "/html/body/div[2]/div[3]")
+    captcha.click()
+
+def request_audio_version(driver):
+    print("Trocando para Captcha de Audio")
+    driver.switch_to.frame(driver.find_element(By.XPATH, "/html/body/div[2]/div[4]/iframe"))
+    audio_button = WebDriverWait(driver, 5).until(
+    EC.element_to_be_clickable((By.XPATH, '/html/body/div/div/div[3]/div[2]/div[1]/div[1]/div[2]/button'))
+    )
+    audio_button.click()
+
+def solve_audio_captcha(driver):
+    print("Escrevendo resposta")
+    time.sleep(1000)
+    text = transcribe(driver.find_element(By.XPATH, "/html/body/div/div/div[3]/audio").get_attribute('src'))
+    driver.find_element(By.XPATH, "/html/body/div/div/div[6]/input").send_keys(text)
+
 def solveCaptcha(driver):
     print("Tentando Resolver Captcha")
-    solver.set_website_url(driver.current_url)
-    print("URL: " + driver.current_url)
-    chave_captcha = driver.find_element(By.XPATH, "/html/body/div[1]/form/div").get_attribute('data-sitekey')
-    solver.set_website_key(chave_captcha)
-    resposta = solver.solve_and_return_solution()
-
-    print("Respoista: " + resposta)
-    if resposta != 0:
-        driver.execute_script(f"document.getElementById('g-recaptcha-response').innerHTML = '{resposta}';")
-        driver.execute_script("document.getElementById('captcha-form').submit();")
-        print("Captcha Resolvido")
-    else:
-        raise(f"Erro ao Resolver o Captcha {str(solver.error_code)}")
+    click_checkbox(driver)
+    driver.switch_to.default_content()
+    request_audio_version(driver)
+    solve_audio_captcha(driver)
+    driver.switch_to.default_content()
+    print("Captcha Resolvido")
 
 
 def initDriver(headless):

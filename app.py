@@ -2,7 +2,7 @@ from flask import Flask
 from funcoes.getEstabelecimentos import *
 from funcoes.getReviews import *
 import pandas as pd
-from io import BytesIO
+from io import StringIO
 import base64
 from flask_cors import CORS
 
@@ -77,21 +77,21 @@ def getReviewsExcel(place_id):
     
     reviews = handleGetReviews(place_id)
     if not (isinstance(reviews, str)):
-        output = BytesIO()
+        output = StringIO()
         
-        with pd.ExcelWriter(output, engine='openpyxl') as writer:
-            df = pd.DataFrame(reviews)
-            df.to_excel(writer, sheet_name='Sheet_name_1', index=False)
-
+        df = pd.DataFrame(reviews)
+        df.to_csv(output, index=False)
+        
         output.seek(0)
-        excel_base64 = base64.b64encode(output.read()).decode('utf-8')
-
+        
+        csv_base64 = base64.b64encode(output.getvalue().encode('utf-8')).decode('utf-8')
+        
         response = {
             'hasError': False,
-            'message': 'Arquivo gerado com sucesso',
-            'arquivo': excel_base64
+            'message': 'Arquivo CSV gerado com sucesso',
+            'arquivo': csv_base64
         }
-
+        
         return response
     else:
        return {
