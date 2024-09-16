@@ -1,72 +1,49 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-import requests
 import json
+import requests
 import time
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
-import requests
-import openai
-from variaveis import OPENAI_API_KEY
+from anticaptchaofficial.recaptchav2proxyon import *
+import zipfile
+from variaveis import *
+from chromeExtension import *
 
+MAX_TIME_OUT = 20
 
-
-openai.api_key = OPENAI_API_KEY
-
+solver = recaptchaV2Proxyon()
+solver.set_verbose(1)
+solver.set_key(ANTICAPTCHA_API_KEY)
+solver.set_proxy_type("http")
+solver.set_proxy_address(PROXY_ADDRESS)
+solver.set_proxy_port(PROXY_PORT)
+solver.set_proxy_login(PROXY_USER)
+solver.set_proxy_password(PROXY_PASSWORD)
+solver.set_user_agent("Chrome/128.0.0.0")
 
 ultimo_intervalo = -1
 reviews_analisadas = 0
 field_names = ['Avaliacoes','Classificacoes','Fotos','Videos','Legendas','Respostas','Edicoes','Informadas como Incorretas','Lugares Adicionadas', 'Estradas Adicionadas', 'Informacoes Verificadas', 'P/R']
 
-def transcribe(url):
-    print("Transcrevendo")
-    # Baixar o arquivo de áudio
-    with open('.temp', 'wb') as f:
-        f.write(requests.get(url).content)
-    
-    # Abrir o arquivo para envio
-    with open('.temp', 'rb') as audio_file:
-        # Fazer a transcrição usando o modelo Whisper
-        transcription = openai.Audio.transcribe(
-            model="whisper-1", 
-            file=audio_file,
-            response_format="text"
-        )
-    
-    return transcription["text"].strip()
-
-def click_checkbox(driver):
-    print("Abrindo Captcha")
-    driver.switch_to.frame(driver.find_element(By.XPATH, "/html/body/div[1]/form/div/div/div/iframe"))
-    captcha = driver.find_element(By.XPATH, "/html/body/div[2]/div[3]")
-    captcha.click()
-
-def request_audio_version(driver):
-    print("Trocando para Captcha de Audio")
-    driver.switch_to.frame(driver.find_element(By.XPATH, "/html/body/div[2]/div[4]/iframe"))
-    audio_button = WebDriverWait(driver, 5).until(
-    EC.element_to_be_clickable((By.XPATH, '/html/body/div/div/div[3]/div[2]/div[1]/div[1]/div[2]/button'))
-    )
-    audio_button.click()
-
-def solve_audio_captcha(driver):
-    print("Escrevendo resposta")
-    time.sleep(1000)
-    text = transcribe(driver.find_element(By.XPATH, "/html/body/div/div/div[3]/audio").get_attribute('src'))
-    driver.find_element(By.XPATH, "/html/body/div/div/div[6]/input").send_keys(text)
-
 def solveCaptcha(driver):
     print("Tentando Resolver Captcha")
-    click_checkbox(driver)
-    driver.switch_to.default_content()
-    request_audio_version(driver)
-    solve_audio_captcha(driver)
-    driver.switch_to.default_content()
-    print("Captcha Resolvido")
+    solver.set_website_url(driver.current_url)
+    print("URL: " + driver.current_url)
+    chave_captcha = driver.find_element(By.XPATH, "/html/body/div[1]/form/div").get_attribute('data-sitekey')
+    solver.set_website_key(chave_captcha)
+    resposta = solver.solve_and_return_solution()
 
+    print("Respoista: " + resposta)
+    if resposta != 0:
+        driver.execute_script(f"document.getElementById('g-recaptcha-response').innerHTML = '{resposta}';")
+        driver.execute_script("document.getElementById('captcha-form').submit();")
+        print("Captcha Resolvido")
+    else:
+        raise(f"Erro ao Resolver o Captcha {str(solver.error_code)}")
 
 def initDriver(headless):
     chrome_options = Options()
@@ -74,6 +51,12 @@ def initDriver(headless):
     chrome_options.add_argument("--disable-software-rasterizer")
     chrome_options.add_argument("--no-sandbox")  # Necessário para rodar em alguns ambientes
     chrome_options.add_argument("--disable-gpu-sandbox")
+    pluginfile = 'proxy_auth_plugin.zip'
+
+    with zipfile.ZipFile(pluginfile, 'w') as zp:
+        zp.writestr("manifest.json", manifest_json)
+        zp.writestr("background.js", background_js)
+    chrome_options.add_extension(pluginfile)
     if(headless):
         chrome_options.add_argument("--headless")  # Executa em modo headless
     driver = webdriver.Chrome(options=chrome_options)
@@ -86,13 +69,13 @@ def getDataFromProfile(perfil,driver):
     driver.get(perfil)
     try:
 
-        contributions_button = WebDriverWait(driver, 5).until(
+        contributions_button = WebDriverWait(driver, MAX_TIME_OUT).until(
 
                 EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[1]/div/div[1]/div/img"))
             )
         
         contributions_button.click()
-        painel = WebDriverWait(driver, 5).until( 
+        painel = WebDriverWait(driver, MAX_TIME_OUT).until( 
                                                                                                  
                 EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[1]/div/div[2]/div/div[2]/div"))
         )
@@ -125,12 +108,17 @@ def getDataFromProfile(perfil,driver):
                 raise Exception("Dados Incompletos")
     except Exception as e:
         try:
-            fields = driver.find_element(By.XPATH, "/html/body/div[1]/div")
-            if("Nossos sistemas detectaram tráfego incomum na sua rede de computadores" in fields.text):
+            captcha = WebDriverWait(driver, MAX_TIME_OUT).until(
+
+                EC.visibility_of_element_located((By.XPATH, "/html/body/div[1]/div"))
+            )
+           
+            if("Nossos sistemas detectaram tráfego incomum na sua rede de computadores" in captcha.text):
                 solveCaptcha(driver)
                 return getDataFromProfile(perfil,driver)
+            
         except Exception as e:
-            raise Exception(str(e))
+            return getDataFromProfile(perfil,driver)
         raise Exception(str(e))
 
 
@@ -199,10 +187,10 @@ def handleGetReviews(id):
         dados = []
 
         actions = ActionChains(driver) 
-        wait = WebDriverWait(driver, 0)
+        wait = WebDriverWait(driver, MAX_TIME_OUT)
         # Clica no botão "Avaliações" (Reviews)
         
-        reviews_button = WebDriverWait(driver, 2).until(
+        reviews_button = WebDriverWait(driver, MAX_TIME_OUT).until(
             EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[3]/div/div/button[2]"))
         )
         reviews_button.click()
@@ -210,7 +198,7 @@ def handleGetReviews(id):
 
         # Clica no botão "Sort"
 
-        sort_button = WebDriverWait(driver, 2).until(
+        sort_button = WebDriverWait(driver, MAX_TIME_OUT).until(
             EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[2]/div[7]/div[2]/button"))
         )
         sort_button.click()
@@ -218,7 +206,7 @@ def handleGetReviews(id):
 
         # Clica no botão "Newest"
         
-        newest_button = WebDriverWait(driver, 2).until(
+        newest_button = WebDriverWait(driver, MAX_TIME_OUT).until(
             EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[3]/div[1]/div[2]"))
         )
         newest_button.click()
