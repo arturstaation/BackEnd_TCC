@@ -8,9 +8,34 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
+from anticaptchaofficial.recaptchav2proxyless import *
+from variaveis import ANTCAPTCHA_API_KEY
+
+solver = recaptchaV2Proxyless()
+solver.set_verbose(1)
+solver.set_key(ANTCAPTCHA_API_KEY)
+
 ultimo_intervalo = -1
 reviews_analisadas = 0
 field_names = ['Avaliacoes','Classificacoes','Fotos','Videos','Legendas','Respostas','Edicoes','Informadas como Incorretas','Lugares Adicionadas', 'Estradas Adicionadas', 'Informacoes Verificadas', 'P/R']
+
+def solveCaptcha(driver):
+    print("Tentando Resolver Captcha")
+    solver.set_website_url(driver.current_url)
+    print("URL: " + driver.current_url)
+    chave_captcha = driver.find_element(By.XPATH, "/html/body/div[1]/form/div").get_attribute('data-sitekey')
+    solver.set_website_key(chave_captcha)
+    resposta = solver.solve_and_return_solution()
+
+    print("Respoista: " + resposta)
+    if resposta != 0:
+        driver.execute_script(f"document.getElementById('g-recaptcha-response').innerHTML = '{resposta}';")
+        driver.execute_script("document.getElementById('captcha-form').submit();")
+        print("Captcha Resolvido")
+    else:
+        raise(f"Erro ao Resolver o Captcha {str(solver.error_code)}")
+
+
 def initDriver(headless):
     chrome_options = Options()
     chrome_options.add_argument("--disable-gpu")  # Desativa a GPU, útil para ambientes headless
@@ -70,7 +95,8 @@ def getDataFromProfile(perfil,driver):
         try:
             fields = driver.find_element(By.XPATH, "/html/body/div[1]/div")
             if("Nossos sistemas detectaram tráfego incomum na sua rede de computadores" in fields.text):
-                raise Exception(f"Detectado como Bot")
+                solveCaptcha(driver)
+                return getDataFromProfile(perfil,driver)
         except Exception as e:
             raise Exception(str(e))
         raise Exception(str(e))
@@ -133,7 +159,7 @@ def getData(response, dados, driver, num, id):
 def handleGetReviews(id):
     global reviews_analisadas
     reviews_analisadas = 0
-    headless = True
+    headless = False
     try:
         driver = initDriver(headless)
         url = f'https://www.google.com/maps/place/?q=place_id:{id}'

@@ -11,6 +11,7 @@ CORS(app)
 
 @app.route('/GetEstabelecimentos/<nome>', methods=['GET'])
 def getEstabelecimentos(nome):
+   print(f"[GetEstabelecimentos]Request para estabelecimento: {nome}")
    
    try:
     estabelecimentos, next_page = handleGetEstabelecimentos(nome)
@@ -40,6 +41,7 @@ def getEstabelecimentos(nome):
 
 @app.route('/GetReviews/<place_id>', methods=['GET'])
 def getReviews(place_id):
+   print(f"[GetReviews]Request Recebido para place_id: {place_id}")
    try: 
     
     reviews = handleGetReviews(place_id)
@@ -70,6 +72,7 @@ def getReviews(place_id):
    
 @app.route('/GetReviewsExcel/<place_id>', methods=['GET'])
 def getReviewsExcel(place_id):
+   print(f"[GetReviewsExcel]Request Recebido para place_id: {place_id}")
    try: 
     
     reviews = handleGetReviews(place_id)

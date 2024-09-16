@@ -5,6 +5,7 @@ pip install selenium<br>
 pip install pandas<br>
 pip install openpyxl<br>
 pip install flask-cors<br>
+pip install anticaptchaofficial<br>
 
 
 ### Rodar Codigo
