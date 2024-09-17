@@ -52,18 +52,20 @@ def solveCaptcha(driver):
     else:
         print(f"Erro ao Resolver o Captcha {str(solver.error_code)}")
 
-def initDriver(headless):
+def initDriver(headless, proxy):
     chrome_options = Options()
     chrome_options.add_argument("--disable-gpu")  # Desativa a GPU, útil para ambientes headless
     chrome_options.add_argument("--disable-software-rasterizer")
     chrome_options.add_argument("--no-sandbox")  # Necessário para rodar em alguns ambientes
     chrome_options.add_argument("--disable-gpu-sandbox")
-    pluginfile = 'proxy_auth_plugin.zip'
 
-    with zipfile.ZipFile(pluginfile, 'w') as zp:
-        zp.writestr("manifest.json", manifest_json)
-        zp.writestr("background.js", background_js)
-    chrome_options.add_extension(pluginfile)
+    if(proxy):
+        pluginfile = 'proxy_auth_plugin.zip'
+
+        with zipfile.ZipFile(pluginfile, 'w') as zp:
+            zp.writestr("manifest.json", manifest_json)
+            zp.writestr("background.js", background_js)
+        chrome_options.add_extension(pluginfile)
     if(headless):
         chrome_options.add_argument("--headless")  # Executa em modo headless
     driver = webdriver.Chrome(options=chrome_options)
@@ -209,8 +211,9 @@ def handleGetReviews(id):
     global reviews_analisadas
     reviews_analisadas = 0
     headless = False
+    proxy = False
     try:
-        driver = initDriver(headless)
+        driver = initDriver(headless, proxy)
         url = f'https://www.google.com/maps/place/?q=place_id:{id}'
         driver.get(url)
         dados = []
