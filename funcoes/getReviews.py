@@ -50,7 +50,7 @@ def solveCaptcha(driver):
         driver.execute_script("document.getElementById('captcha-form').submit();")
         print("Captcha Resolvido")
     else:
-        raise(f"Erro ao Resolver o Captcha {str(solver.error_code)}")
+        print(f"Erro ao Resolver o Captcha {str(solver.error_code)}")
 
 def initDriver(headless):
     chrome_options = Options()
@@ -152,9 +152,12 @@ def getDataFromProfile(perfil,driver):
 def getData(response, dados, driver, num, id):
     global ultimo_intervalo
     global reviews_analisadas
+    global current_profile_retry
+    global current_captcha_retry
     profile_data = {field: "null" for field in field_names}
     try:
         for i in range(len(response)):
+            current_captcha_retry, current_profile_retry = 0,0
             reviews_analisadas += 1
 
             tempo = response[i][0][1][6]
