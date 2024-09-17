@@ -14,6 +14,10 @@ from variaveis import *
 from chromeExtension import *
 
 MAX_TIME_OUT = 20
+MAX_RETRYS = 5
+current_profile_retry = 0
+current_captcha_retry = 0
+
 
 solver = recaptchaV2Proxyon()
 solver.set_verbose(1)
@@ -30,6 +34,9 @@ reviews_analisadas = 0
 field_names = ['Avaliacoes','Classificacoes','Fotos','Videos','Legendas','Respostas','Edicoes','Informadas como Incorretas','Lugares Adicionadas', 'Estradas Adicionadas', 'Informacoes Verificadas', 'P/R']
 
 def solveCaptcha(driver):
+    global current_captcha_retry
+    if(current_captcha_retry > MAX_RETRYS):
+        raise Exception("Numero maximo de tentativas para solucionar o captcha excedidas.")
     print("Tentando Resolver Captcha")
     solver.set_website_url(driver.current_url)
     print("URL: " + driver.current_url)
@@ -56,14 +63,18 @@ def initDriver(headless):
     with zipfile.ZipFile(pluginfile, 'w') as zp:
         zp.writestr("manifest.json", manifest_json)
         zp.writestr("background.js", background_js)
-    chrome_options.add_extension(pluginfile)
+    #chrome_options.add_extension(pluginfile)
     if(headless):
         chrome_options.add_argument("--headless")  # Executa em modo headless
     driver = webdriver.Chrome(options=chrome_options)
     return driver
+
+
 def getDataFromProfile(perfil,driver):  
+    perfil = "https://google.com"
     global ultimo_intervalo
     global field_names
+    global current_profile_retry
     obj = {field: "null" for field in field_names}
     obj['Local Guide'] = "null"
     driver.get(perfil)
@@ -91,13 +102,17 @@ def getDataFromProfile(perfil,driver):
             index = 3
             div = 2
 
+
         if(len(numeros) == len(field_names) or len(numeros)-3 == len(field_names)):
             for i in range (0,len(field_names)):     
+
                 obj[field_names[i]] = int(numeros[i+index].replace('.', '', 1))
             return obj
         else:
             if(len(numeros) == len(field_names)-1 or len(numeros)-3 == len(field_names)-1):
-                for i in range (0,len(field_names)-1):             
+
+                for i in range (0,len(field_names)-1):    
+       
                     obj[field_names[i]] = int(numeros[i+index].replace('.', '', 1))
                 obj['P/R'] = obj['Informacoes Verificadas']
                 obj['Informacoes Verificadas'] = obj['Estradas Adicionadas'] 
@@ -115,11 +130,22 @@ def getDataFromProfile(perfil,driver):
            
             if("Nossos sistemas detectaram tráfego incomum na sua rede de computadores" in captcha.text):
                 solveCaptcha(driver)
+                global current_captcha_retry 
+                current_captcha_retry+=1
                 return getDataFromProfile(perfil,driver)
             
         except Exception as e:
+
+            if(current_profile_retry > MAX_RETRYS):
+                raise Exception(f"Numero maximo de tentativas para obter dados de um perfil excedidas. + {str(e)}")
+            current_profile_retry+=1
             return getDataFromProfile(perfil,driver)
-        raise Exception(str(e))
+        
+        if(current_profile_retry > MAX_RETRYS):
+            raise Exception(f"Numero maximo de tentativas para obter dados de um perfil excedidas. + {str(e)}")
+        
+        current_profile_retry+=1
+        return getDataFromProfile(perfil,driver)
 
 
     
@@ -143,6 +169,7 @@ def getData(response, dados, driver, num, id):
 
             if perfil != "null":
                 profile_data = getDataFromProfile(perfil, driver)
+            
 
             data = {
                 "tempo": tempo,
@@ -209,8 +236,11 @@ def handleGetReviews(id):
         newest_button = WebDriverWait(driver, MAX_TIME_OUT).until(
             EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[3]/div[1]/div[2]"))
         )
+        
         newest_button.click()
-
+        first_review = WebDriverWait(driver, MAX_TIME_OUT).until(
+            EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[2]/div[9]/div[1]"))
+        )
 
         antigo = ""
         contador = 0
@@ -229,7 +259,8 @@ def handleGetReviews(id):
         """)
 
         if num > 10:
-            while contador < 3:
+            start_time = time.time()
+            while contador < 3 and (time.time() - start_time) < MAX_TIME_OUT:
                 xhr_requests = driver.execute_script("""
                 var requests = performance.getEntriesByType('resource');
                 var xhrRequests = [];
@@ -251,8 +282,10 @@ def handleGetReviews(id):
                             url = xhr_requests[i]
 
                 if contador < 3:
-                    actions.send_keys(Keys.PAGE_DOWN).perform()
-
+                    actions.send_keys(Keys.END).perform()
+            if (time.time() - start_time) > MAX_TIME_OUT and contador < 3:
+                raise Exception("Tempo máximo excedido para obter o XHR")
+            print(f"XHR obtido para o estabelecimento {id}")
             response = json.loads(requests.get(antigo).text[5:].encode('utf-8', 'ignore').decode('utf-8'))
             token_atual = response[1]
             token_atual = token_atual.replace("=", "%3D")
