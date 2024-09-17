@@ -313,7 +313,7 @@ def handleGetReviews(id):
                 response = json.loads(requests.get(url).text[5:].encode('utf-8', 'ignore').decode('utf-8'))
                 getData(response[2], dados,driver,num,id)
             else:
-                return []
+                print(f"Estabelecimento {id} não possui reviews")
         driver.quit()
         return dados
     except Exception as e:
