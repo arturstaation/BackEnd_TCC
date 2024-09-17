@@ -63,7 +63,7 @@ def initDriver(headless):
     with zipfile.ZipFile(pluginfile, 'w') as zp:
         zp.writestr("manifest.json", manifest_json)
         zp.writestr("background.js", background_js)
-    #chrome_options.add_extension(pluginfile)
+    chrome_options.add_extension(pluginfile)
     if(headless):
         chrome_options.add_argument("--headless")  # Executa em modo headless
     driver = webdriver.Chrome(options=chrome_options)
@@ -71,7 +71,6 @@ def initDriver(headless):
 
 
 def getDataFromProfile(perfil,driver):  
-    perfil = "https://google.com"
     global ultimo_intervalo
     global field_names
     global current_profile_retry
