@@ -14,10 +14,6 @@ from variaveis import *
 from chromeExtension import *
 
 MAX_TIME_OUT = 20
-MAX_RETRYS = 5
-current_profile_retry = 0
-current_captcha_retry = 0
-current_scroll = 0
 
 solver = recaptchaV2Proxyon()
 solver.set_verbose(1)
@@ -34,10 +30,6 @@ reviews_analisadas = 0
 field_names = ['Avaliacoes','Classificacoes','Fotos','Videos','Legendas','Respostas','Edicoes','Informadas como Incorretas','Lugares Adicionadas', 'Estradas Adicionadas', 'Informacoes Verificadas', 'P/R']
 
 def solveCaptcha(driver):
-    global current_captcha_retry
-    print(current_captcha_retry)
-    if(current_captcha_retry > MAX_RETRYS):
-        raise Exception("Maximo de tentativas para resolver o captcha excedidas")
     print("Tentando Resolver Captcha")
     solver.set_website_url(driver.current_url)
     print("URL: " + driver.current_url)
@@ -72,15 +64,9 @@ def initDriver(headless):
 def getDataFromProfile(perfil,driver):  
     global ultimo_intervalo
     global field_names
-    global current_captcha_retry
-    global current_profile_retry
-    print(current_profile_retry)
-    if(current_profile_retry > MAX_RETRYS):
-        raise Exception("Maximo de tentativas para obter dados de um perfil excedidas")
     obj = {field: "null" for field in field_names}
     obj['Local Guide'] = "null"
     driver.get(perfil)
-
     try:
 
         contributions_button = WebDriverWait(driver, MAX_TIME_OUT).until(
@@ -129,11 +115,9 @@ def getDataFromProfile(perfil,driver):
            
             if("Nossos sistemas detectaram tráfego incomum na sua rede de computadores" in captcha.text):
                 solveCaptcha(driver)
-                current_captcha_retry +=1
                 return getDataFromProfile(perfil,driver)
             
         except Exception as e:
-            current_profile_retry +=1
             return getDataFromProfile(perfil,driver)
         raise Exception(str(e))
 
@@ -143,11 +127,8 @@ def getDataFromProfile(perfil,driver):
 def getData(response, dados, driver, num, id):
     global ultimo_intervalo
     global reviews_analisadas
-    global current_captcha_retry
-    global current_profile_retry
     profile_data = {field: "null" for field in field_names}
     try:
-        current_profile_retry, current_captcha_retry = 0,0
         for i in range(len(response)):
             reviews_analisadas += 1
 
@@ -248,9 +229,7 @@ def handleGetReviews(id):
         """)
 
         if num > 10:
-            global current_scroll
-            current_scroll = 0
-            while contador < 3 and current_scroll < MAX_RETRYS:
+            while contador < 3:
                 xhr_requests = driver.execute_script("""
                 var requests = performance.getEntriesByType('resource');
                 var xhrRequests = [];
@@ -273,10 +252,6 @@ def handleGetReviews(id):
 
                 if contador < 3:
                     actions.send_keys(Keys.PAGE_DOWN).perform()
-                    current_scroll+=1
-            
-            if(current_scroll > MAX_RETRYS):
-                raise(f"Erro ao obter as Reviews do Estabelecimento {id}")
 
             response = json.loads(requests.get(antigo).text[5:].encode('utf-8', 'ignore').decode('utf-8'))
             token_atual = response[1]
@@ -305,7 +280,7 @@ def handleGetReviews(id):
                 response = json.loads(requests.get(url).text[5:].encode('utf-8', 'ignore').decode('utf-8'))
                 getData(response[2], dados,driver,num,id)
             else:
-                print(f"Estabelecimento {id} não possui reviews")
+                return []
         driver.quit()
         return dados
     except Exception as e:
