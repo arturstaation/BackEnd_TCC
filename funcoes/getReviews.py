@@ -10,11 +10,13 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 from anticaptchaofficial.recaptchav2proxyon import *
 import zipfile
+import socket
 from variaveis import *
 from chromeExtension import *
 
 MAX_TIME_OUT = 20
 MAX_RETRYS = 5
+proxy_data = []
 current_profile_retry = 0
 current_captcha_retry = 0
 
@@ -23,11 +25,8 @@ solver = recaptchaV2Proxyon()
 solver.set_verbose(1)
 solver.set_key(ANTICAPTCHA_API_KEY)
 solver.set_proxy_type("http")
-solver.set_proxy_address(PROXY_ADDRESS)
-solver.set_proxy_port(PROXY_PORT)
-solver.set_proxy_login(PROXY_USER)
-solver.set_proxy_password(PROXY_PASSWORD)
 solver.set_user_agent("Chrome/128.0.0.0")
+solver.set_cookies("test=true")
 
 ultimo_intervalo = -1
 reviews_analisadas = 0
@@ -35,22 +34,26 @@ field_names = ['Avaliacoes','Classificacoes','Fotos','Videos','Legendas','Respos
 
 def solveCaptcha(driver):
     global current_captcha_retry
+    global reviews_analisadas
     if(current_captcha_retry > MAX_RETRYS):
         raise Exception("Numero maximo de tentativas para solucionar o captcha excedidas.")
-    print("Tentando Resolver Captcha")
+    print(f"Tentando Resolver Captcha da review {reviews_analisadas+1} - {current_captcha_retry+1}a tentativa")
     solver.set_website_url(driver.current_url)
-    print("URL: " + driver.current_url)
+    
     chave_captcha = driver.find_element(By.XPATH, "/html/body/div[1]/form/div").get_attribute('data-sitekey')
     solver.set_website_key(chave_captcha)
+    data_s = driver.find_element(By.XPATH, "/html/body/div[1]/form/div").get_attribute('data-s')
+    solver.set_data_s(data_s)
     resposta = solver.solve_and_return_solution()
 
-    print("Respoista: " + resposta)
     if resposta != 0:
-        driver.execute_script(f"document.getElementById('g-recaptcha-response').innerHTML = '{resposta}';")
-        driver.execute_script("document.getElementById('captcha-form').submit();")
-        print("Captcha Resolvido")
+        print(f"Captcha da Review {reviews_analisadas+1} Resolvido na {current_captcha_retry+1}a tentativa")
+        driver.execute_script('document.getElementById("g-recaptcha-response").innerHTML = "%s"' % resposta)
+        time.sleep(5)
+        driver.execute_script("submitCallback()")
+        requests.get(f"https://{PROXY_USER}:{PROXY_PASSWORD}@gw.dataimpulse.com:777/api/rotate_ip?port={proxy_data[1]}")
     else:
-        print(f"Erro ao Resolver o Captcha {str(solver.error_code)}")
+        print(f"Erro ao Resolver o Captcha da Review {reviews_analisadas+1} na {current_captcha_retry+1} tentativa. Erro: {str(solver.error_code)}")
 
 def initDriver(headless, proxy):
     chrome_options = Options()
@@ -58,8 +61,21 @@ def initDriver(headless, proxy):
     chrome_options.add_argument("--disable-software-rasterizer")
     chrome_options.add_argument("--no-sandbox")  # Necessário para rodar em alguns ambientes
     chrome_options.add_argument("--disable-gpu-sandbox")
-
+    
     if(proxy):
+        global proxy_data
+        try:
+            response = requests.get(f"https://{PROXY_USER}:{PROXY_PASSWORD}@gw.dataimpulse.com:777/api/list?format=hostname:port:login:password&quantity=1&type=sticky&protocol=http&countries=br")
+            proxy_data = response.text.split(':')
+            proxy_data[0] = socket.gethostbyname(proxy_data[0])
+            global solver
+            solver.set_proxy_address(proxy_data[0])
+            solver.set_proxy_port(proxy_data[1])
+            solver.set_proxy_login(proxy_data[2])
+            solver.set_proxy_password(proxy_data[3].rstrip('\n'))
+        except:
+            raise Exception("Erro ao obter dados do proxy")
+        manifest_json, background_js = getExtensionData(proxy_data[0], proxy_data[1], proxy_data[2], proxy_data[3])
         pluginfile = 'proxy_auth_plugin.zip'
 
         with zipfile.ZipFile(pluginfile, 'w') as zp:
@@ -138,13 +154,16 @@ def getDataFromProfile(perfil,driver):
         except Exception as e:
 
             if(current_profile_retry > MAX_RETRYS):
-                raise Exception(f"Numero maximo de tentativas para obter dados de um perfil excedidas. + {str(e)}")
+                raise Exception(f"Numero maximo de tentativas para obter dados de um perfil excedidas. Erro: {str(e)}")
+            
+            print(f"Erro ao obter dados do perfil da review {reviews_analisadas+1} - {current_profile_retry+1}a tentativa - Erro: {str(e)}")
             current_profile_retry+=1
             return getDataFromProfile(perfil,driver)
         
         if(current_profile_retry > MAX_RETRYS):
-            raise Exception(f"Numero maximo de tentativas para obter dados de um perfil excedidas. + {str(e)}")
+            raise Exception(f"Numero maximo de tentativas para obter dados de um perfil excedidas. Erro: {str(e)}")
         
+        print(f"Erro ao obter dados do perfil da review {reviews_analisadas+1} - {current_profile_retry+1}a tentativa - Erro: {str(e)}")
         current_profile_retry+=1
         return getDataFromProfile(perfil,driver)
 
@@ -211,7 +230,7 @@ def handleGetReviews(id):
     global reviews_analisadas
     reviews_analisadas = 0
     headless = False
-    proxy = False
+    proxy = True
     try:
         driver = initDriver(headless, proxy)
         url = f'https://www.google.com/maps/place/?q=place_id:{id}'
@@ -243,9 +262,7 @@ def handleGetReviews(id):
         )
         
         newest_button.click()
-        first_review = WebDriverWait(driver, MAX_TIME_OUT).until(
-            EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[2]/div[9]/div[1]"))
-        )
+
 
         antigo = ""
         contador = 0
@@ -264,6 +281,9 @@ def handleGetReviews(id):
         """)
 
         if num > 10:
+            first_review = WebDriverWait(driver, MAX_TIME_OUT).until(
+            EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[2]/div[9]/div[1]"))
+            )
             start_time = time.time()
             while contador < 3 and (time.time() - start_time) < MAX_TIME_OUT:
                 xhr_requests = driver.execute_script("""
