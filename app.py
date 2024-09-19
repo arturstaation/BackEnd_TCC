@@ -77,6 +77,7 @@ def getReviewsExcel(place_id):
     
     reviews = handleGetReviews(place_id)
     if not (isinstance(reviews, str)):
+        print(f"[GetReviewsExcel]Convertendo reviews do place_id: {place_id} para base64")
         output = StringIO()
         
         df = pd.DataFrame(reviews)

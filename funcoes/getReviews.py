@@ -8,7 +8,6 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
-from anticaptchaofficial.recaptchav2proxyon import *
 import zipfile
 import socket
 from variaveis import *
@@ -21,13 +20,6 @@ current_profile_retry = 0
 current_captcha_retry = 0
 
 
-solver = recaptchaV2Proxyon()
-solver.set_verbose(1)
-solver.set_key(ANTICAPTCHA_API_KEY)
-solver.set_proxy_type("http")
-solver.set_user_agent("Chrome/128.0.0.0")
-solver.set_cookies("test=true")
-
 ultimo_intervalo = -1
 reviews_analisadas = 0
 field_names = ['Avaliacoes','Classificacoes','Fotos','Videos','Legendas','Respostas','Edicoes','Informadas como Incorretas','Lugares Adicionadas', 'Estradas Adicionadas', 'Informacoes Verificadas', 'P/R']
@@ -37,22 +29,58 @@ def solveCaptcha(driver):
     global reviews_analisadas
     if(current_captcha_retry > MAX_RETRYS):
         raise Exception("Numero maximo de tentativas para solucionar o captcha excedidas.")
-    print(f"Tentando Resolver Captcha da review {reviews_analisadas+1} - {current_captcha_retry+1}a tentativa")
-    solver.set_website_url(driver.current_url)
+    print(f"Tentando Resolver Captcha do perfil {reviews_analisadas+1} - {current_captcha_retry+1}a tentativa")
     
     chave_captcha = driver.find_element(By.XPATH, "/html/body/div[1]/form/div").get_attribute('data-sitekey')
-    solver.set_website_key(chave_captcha)
     data_s = driver.find_element(By.XPATH, "/html/body/div[1]/form/div").get_attribute('data-s')
-    solver.set_data_s(data_s)
-    resposta = solver.solve_and_return_solution()
+    data = {
+    "clientKey": f"{ANTICAPTCHA_API_KEY}",
+    "task": {
+        "type": "RecaptchaV2TaskProxyless",
+        "websiteURL": f"{driver.current_url}",
+        "websiteKey": f"{chave_captcha}",
+        "recaptchaDataSValue" : f"{data_s}",
+        "proxyType": "http",
+        "proxyAddress": f"{proxy_data[0]}",
+        "proxyPort": f"{proxy_data[1]}",
+        "proxyLogin": f"{proxy_data[2]}",
+        "proxyPassword": f"{proxy_data[3]}",
+        "userAgent": "Chrome/128.0.0.0",
+        "cookies": "test=true"
+    }
+    }   
+    create_task = requests.post(f"https://api.anti-captcha.com/createTask", json=data)
+    task = create_task.json()
+    if(task['errorId'] == 0):
+        task_id = task["taskId"]
+        data = {
+            "clientKey": f"{ANTICAPTCHA_API_KEY}",
+            "taskId": int(task_id)
+        }
+        
+        current_status = 'processing'
+        resposta = ''
+        while current_status == 'processing':
+            time.sleep(1)
+            status_request = requests.post(f"https://api.anti-captcha.com/getTaskResult", json=data)
+            status = status_request.json()
+            if(status['errorId'] != 0):
+               print(f"Erro ao Resolver o Captcha do Perfil {reviews_analisadas+1} na {current_captcha_retry+1} tentativa. Erro: {status['errorDescription']}") 
+               break
+            if(status['status'] != 'processing'):
+                resposta = status['solution']['gRecaptchaResponse']
 
-    if resposta != 0:
+            current_status = status['status']
+            
         driver.execute_script('document.getElementById("g-recaptcha-response").innerHTML = "%s"' % resposta)
         time.sleep(MAX_TIME_OUT)
         driver.execute_script("submitCallback()")
-        requests.get(f"https://{PROXY_USER}:{PROXY_PASSWORD}@gw.dataimpulse.com:777/api/rotate_ip?port={proxy_data[1]}")
+        requests.get(f"https://{PROXY_USER}:{PROXY_PASSWORD}@gw.dataimpulse.com:777/api/rotate_ip?port={proxy_data[1]}") 
+        return
     else:
-        print(f"Erro ao Resolver o Captcha da Review {reviews_analisadas+1} na {current_captcha_retry+1} tentativa. Erro: {str(solver.error_code)}")
+        print(f"Erro ao solicitar task para resolver o captcha do perfil {reviews_analisadas+1} na tentativa {current_captcha_retry+1}. Erro: {task['errorDescription']}")
+        return
+
 
 def initDriver(headless, proxy):
     chrome_options = Options()
@@ -62,16 +90,12 @@ def initDriver(headless, proxy):
     chrome_options.add_argument("--disable-gpu-sandbox")
     
     if(proxy):
+        
         global proxy_data
         try:
             response = requests.get(f"https://{PROXY_USER}:{PROXY_PASSWORD}@gw.dataimpulse.com:777/api/list?format=hostname:port:login:password&quantity=1&type=sticky&protocol=http&countries=br")
             proxy_data = response.text.split(':')
             proxy_data[0] = socket.gethostbyname(proxy_data[0])
-            global solver
-            solver.set_proxy_address(proxy_data[0])
-            solver.set_proxy_port(proxy_data[1])
-            solver.set_proxy_login(proxy_data[2])
-            solver.set_proxy_password(proxy_data[3].rstrip('\n'))
         except:
             raise Exception("Erro ao obter dados do proxy")
         manifest_json, background_js = getExtensionData(proxy_data[0], proxy_data[1], proxy_data[2], proxy_data[3])
@@ -82,10 +106,44 @@ def initDriver(headless, proxy):
             zp.writestr("background.js", background_js)
         chrome_options.add_extension(pluginfile)
     if(headless):
-        chrome_options.add_argument("--headless")  # Executa em modo headless
+        chrome_options.add_argument("--headless") 
+        
     driver = webdriver.Chrome(options=chrome_options)
+
     return driver
 
+def getDataFromProfiles(dados,driver, id):
+    global reviews_analisadas
+    global current_profile_retry
+    global current_captcha_retry
+    global ultimo_intervalo
+    reviews_analisadas = 0
+    for i in range (len(dados)):
+        current_captcha_retry, current_profile_retry = 0,0
+        profile_data = getDataFromProfile(dados[i]['perfil'],driver)
+        dados[i]['Local Guide'] = profile_data['Local Guide']
+        dados[i][field_names[0]] = profile_data[field_names[0]]
+        dados[i][field_names[1]] = profile_data[field_names[1]]
+        dados[i][field_names[2]] = profile_data[field_names[2]]
+        dados[i][field_names[3]] = profile_data[field_names[3]]
+        dados[i][field_names[4]] = profile_data[field_names[4]]
+        dados[i][field_names[5]] = profile_data[field_names[5]]
+        dados[i][field_names[6]] = profile_data[field_names[6]]
+        dados[i][field_names[7]] = profile_data[field_names[7]]
+        dados[i][field_names[8]] = profile_data[field_names[8]]
+        dados[i][field_names[9]] = profile_data[field_names[9]]
+        dados[i][field_names[10]] = profile_data[field_names[10]]
+        dados[i][field_names[11]] = profile_data[field_names[11]]
+        del dados[i]['perfil']
+        percent = (reviews_analisadas / (len(dados)-1)) * 100
+        percent_rounded = int(percent // 10) * 10
+
+        if percent_rounded != ultimo_intervalo:
+            print(f"{percent_rounded}% perfis processados do estabelecimento {id}")
+            ultimo_intervalo = percent_rounded
+        reviews_analisadas+=1
+        if(current_captcha_retry != 0):
+            print(f"Captcha do Perfil {reviews_analisadas} Resolvido na {current_captcha_retry}a tentativa")
 
 def getDataFromProfile(perfil,driver):  
     global ultimo_intervalo
@@ -171,15 +229,13 @@ def getDataFromProfile(perfil,driver):
 
     
     
-def getData(response, dados, driver, num, id):
-    global ultimo_intervalo
+def getData(response, dados, num, id):
     global reviews_analisadas
-    global current_profile_retry
-    global current_captcha_retry
+    global ultimo_intervalo
     profile_data = {field: "null" for field in field_names}
+    profile_data['Local Guide'] = "null"
     try:
         for i in range(len(response)):
-            current_captcha_retry, current_profile_retry = 0,0
             reviews_analisadas += 1
 
             tempo = response[i][0][1][6]
@@ -191,14 +247,11 @@ def getData(response, dados, driver, num, id):
             except IndexError:
                 avaliacao = "null"
 
-            if perfil != "null":
-                profile_data = getDataFromProfile(perfil, driver)
-            
-
             data = {
                 "tempo": tempo,
                 "estrelas": estrelas,
                 "avaliacao": avaliacao,
+                "perfil": perfil,
                 "local guide": profile_data['Local Guide'],
                 "avaliacoes": profile_data[field_names[0]],
                 "classificacoes": profile_data[field_names[1]],
@@ -214,8 +267,6 @@ def getData(response, dados, driver, num, id):
             }
 
             dados.append(data)
-            if(current_captcha_retry != 0):
-                print(f"Captcha da Review {reviews_analisadas+1} Resolvido na {current_captcha_retry+1}a tentativa")
                 
             percent = (reviews_analisadas / num) * 100
             percent_rounded = int(percent // 10) * 10
@@ -224,8 +275,6 @@ def getData(response, dados, driver, num, id):
                 print(f"{percent_rounded}% reviews processadas do estabelecimento {id}")
                 ultimo_intervalo = percent_rounded
     except Exception as e:
-        if "Detectado como Bot" in str(e):
-            print(str(e) + f" na Review {reviews_analisadas}")
         raise Exception(str(e))
 
         
@@ -240,7 +289,7 @@ def handleGetReviews(id):
         url = f'https://www.google.com/maps/place/?q=place_id:{id}'
         driver.get(url)
         dados = []
-
+        
         actions = ActionChains(driver) 
         wait = WebDriverWait(driver, MAX_TIME_OUT)
         # Clica no botão "Avaliações" (Reviews)
@@ -318,7 +367,7 @@ def handleGetReviews(id):
             response = json.loads(requests.get(antigo).text[5:].encode('utf-8', 'ignore').decode('utf-8'))
             token_atual = response[1]
             token_atual = token_atual.replace("=", "%3D")
-            getData(response[2], dados,driver, num,id)
+            getData(response[2], dados, num,id)
 
             token_proximo = None
             contador = 0
@@ -327,20 +376,23 @@ def handleGetReviews(id):
                 
                 if response[0] is None:
                     token_proximo = response[1]
-                    getData(response[2], dados,driver,num,id)
+                    getData(response[2], dados,num,id)
                     if token_proximo is not None:
                         token_proximo = token_proximo.replace("=", "%3D")
                         url = url.replace(token_atual, token_proximo)
                     token_atual = token_proximo
                 else:
                     break
+            
+            getDataFromProfiles(dados,driver, id)
         else:
             if(num != 0):
                 for i in range(len(xhr_requests)):
                     if "listugcposts" in xhr_requests[i]:
                         url = xhr_requests[i]
                 response = json.loads(requests.get(url).text[5:].encode('utf-8', 'ignore').decode('utf-8'))
-                getData(response[2], dados,driver,num,id)
+                getData(response[2], dados,num,id)
+                getDataFromProfiles(dados,driver, id)
             else:
                 print(f"Estabelecimento {id} não possui reviews")
         driver.quit()
