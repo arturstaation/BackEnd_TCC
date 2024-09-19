@@ -47,9 +47,8 @@ def solveCaptcha(driver):
     resposta = solver.solve_and_return_solution()
 
     if resposta != 0:
-        print(f"Captcha da Review {reviews_analisadas+1} Resolvido na {current_captcha_retry+1}a tentativa")
         driver.execute_script('document.getElementById("g-recaptcha-response").innerHTML = "%s"' % resposta)
-        time.sleep(5)
+        time.sleep(MAX_TIME_OUT)
         driver.execute_script("submitCallback()")
         requests.get(f"https://{PROXY_USER}:{PROXY_PASSWORD}@gw.dataimpulse.com:777/api/rotate_ip?port={proxy_data[1]}")
     else:
@@ -155,14 +154,16 @@ def getDataFromProfile(perfil,driver):
 
             if(current_profile_retry > MAX_RETRYS):
                 raise Exception(f"Numero maximo de tentativas para obter dados de um perfil excedidas. Erro: {str(e)}")
-            
+            if(current_captcha_retry > MAX_RETRYS):
+                raise Exception(str(e))
             print(f"Erro ao obter dados do perfil da review {reviews_analisadas+1} - {current_profile_retry+1}a tentativa - Erro: {str(e)}")
             current_profile_retry+=1
             return getDataFromProfile(perfil,driver)
         
         if(current_profile_retry > MAX_RETRYS):
             raise Exception(f"Numero maximo de tentativas para obter dados de um perfil excedidas. Erro: {str(e)}")
-        
+        if(current_captcha_retry > MAX_RETRYS):
+            raise Exception(str(e))
         print(f"Erro ao obter dados do perfil da review {reviews_analisadas+1} - {current_profile_retry+1}a tentativa - Erro: {str(e)}")
         current_profile_retry+=1
         return getDataFromProfile(perfil,driver)
@@ -213,6 +214,9 @@ def getData(response, dados, driver, num, id):
             }
 
             dados.append(data)
+            if(current_captcha_retry != 0):
+                print(f"Captcha da Review {reviews_analisadas+1} Resolvido na {current_captcha_retry+1}a tentativa")
+                
             percent = (reviews_analisadas / num) * 100
             percent_rounded = int(percent // 10) * 10
 
