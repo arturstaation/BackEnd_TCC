@@ -3,8 +3,8 @@ from variaveis import GOOGLE_PLACES_API_KEY
 def handleGetEstabelecimentos(nome):
 
     try:
-        # Localização e parâmetros de busca
-        location = 'em São Paulo, Brasil'  # Localização fixa em São Paulo
+       
+        location = 'em São Paulo, Brasil' 
         
         params = {
             'query': nome + location,
@@ -29,7 +29,7 @@ def handleGetEstabelecimentos(nome):
                     "name": results.get("name"),
                     "formatted_address": results.get("formatted_address"),
                     "place_id": results.get("place_id"),
-                    "reviews": results.get("user_ratings_total"),  # Corrigido para user_ratings_total
+                    "reviews": results.get("user_ratings_total"),  
                     "rating": results.get("rating")
                 }
                 
@@ -39,7 +39,6 @@ def handleGetEstabelecimentos(nome):
             error_message = f"Erro ao Obter Estabelecimentos {nome}.Erro: {result}"
             print(error_message)
             return ("Erro ao Obter Estabelecimentos."),""
-        # Verifica se há mais páginas de resultados disponíveis
         next_token = ""
         if('next_page_token' in  result):
             next_token = result['next_page_token']
