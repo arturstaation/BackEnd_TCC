@@ -93,7 +93,7 @@ def processProfileChunk(dados_chunk, driver, proxy, chunk_index, id, total_revie
             if current_captcha_retry != 0:
                 print(f"Captcha do Perfil {reviews_analisadas} Resolvido na {current_captcha_retry}a tentativa (Thread {chunk_index})")
 
-                
+
             reviews_analisadas += 1
             percent = (reviews_analisadas / total_reviews) * 100
             percent_rounded = int(percent // 10) * 10
@@ -103,8 +103,9 @@ def processProfileChunk(dados_chunk, driver, proxy, chunk_index, id, total_revie
                 ultimo_intervalo = percent_rounded
 
             
-        print(f"Thread {chunk_index} para o processamento do estabelecimento {id} finalizada")
+        print(f"Thread {chunk_index} para o processamento do estabelecimento {id} finalizada com sucesso")
     except Exception as e:
+        print(f"Thread {chunk_index} para o processamento do estabelecimento {id} finalizada com erro. Erro: {str(e)}")
         raise Exception(f"Erro ao processar do estabelecimento {id} perfis na Thread {chunk_index} - Erro: {str(e)}")
     finally:
         driver.quit()
