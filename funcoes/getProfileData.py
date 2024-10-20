@@ -126,7 +126,7 @@ def getDataFromProfiles(dados, id):
     with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
         futures = []
         for index, chunk in enumerate(chunks):
-            futures.append(executor.submit(processProfileChunk, chunk, initDriver(False, True, proxies[index]), proxies[index], index, id,total_reviews))
+            futures.append(executor.submit(processProfileChunk, chunk, initDriver(headless=False, proxy=True, proxy_data=proxies[index]), proxies[index], index, id,total_reviews))
 
         for future in concurrent.futures.as_completed(futures):
             try:
@@ -144,8 +144,7 @@ def getDataFromProfile(perfil,driver, proxy, current_profile_retry, current_capt
     try:
 
         contributions_button = WebDriverWait(driver, MAX_TIME_OUT).until(
-
-                EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[1]/div/div[1]/div/img"))
+                EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[1]/div/div[1]/img"))
             )
         
         contributions_button.click()
