@@ -5,6 +5,18 @@ pip install pandas<br>
 pip install openpyxl<br>
 pip install flask-cors<br>
 pip install anticaptchaofficial<br>
+pip install numpy<br>
+pip install pandas<br>
+pip install nltk<br>
+pip install pickle<br>
+pip install -U scikit-learn<br>
+
+
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix, roc_curve, auc
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 
 ### Rodar Codigo

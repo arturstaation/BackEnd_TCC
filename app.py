@@ -1,6 +1,7 @@
 from flask import Flask
 from funcoes.getEstabelecimentos import *
 from funcoes.getReviews import *
+from funcoes.getCorrectRating import *
 import pandas as pd
 from io import StringIO
 import base64
@@ -114,6 +115,65 @@ def getReviewsExcel(place_id):
             'hasError': True,
             'message': error_message
     }, 500  
+   
+      
+@app.route('/GetCorrectRating/<place_id>', methods=['GET'])
+def getCorrectRating(place_id):
+   print(f"[GetCorrectRating]Request Recebido para place_id: {place_id}")
+   try: 
+    
+    reviews = handleGetReviews(place_id)
+    if not (isinstance(reviews, str)):
+        print(f"[GetCorrectRating]Mandando as reviews do place_id: {place_id} para avaliação da IA")
+        
+        df = pd.DataFrame(reviews)
+        result = handleGetCorrectRating(df, place_id)
+
+        print(result)
+        print(f"[GetCorrectRating]Request para place_id: {place_id} concluido com sucesso")
+        response = {
+            'hasError': False,
+            'message': 'Arquivo CSV gerado com sucesso',
+            'rating': result
+        }
+        
+        return response
+    else:
+       print(f"[GetCorrectRating]Request para place_id: {place_id} concluido com erro: {reviews}")
+       return {
+            'hasError': True,
+            'message': error_message
+    }, 500 
+
+   except Exception as e:
+    print(f"[GetCorrectRating]Request para place_id: {place_id} concluido com erro: {str(e)}")
+    return {
+            'hasError': True,
+            'message': error_message
+    }, 500  
+   
+@app.route('/SaveModel/', methods=['GET'])
+def saveModel():
+   print(f"[SaveModel]Request Recebido para salvar o modelo")
+   try: 
+    
+        saveModel()
+        
+        print(f"[SaveModel]Modelo salvo com sucesso")
+        response = {
+            'hasError': False,
+            'message': 'Modelo salvo com sucesso',
+        }
+        return response
+        
+        
+
+   except Exception as e:
+    print(f"[SaveModel]Modelo salvo com erro: {str(e)}")
+    return {
+            'hasError': True,
+            'message': error_message
+    }, 500 
     
 if __name__ == '__main__':
     app.run(debug=False)
