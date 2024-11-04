@@ -78,7 +78,7 @@ def fetch_page(url):
 def handleGetReviews(id):
     global reviews_analisadas
     reviews_analisadas = 0
-    headless = False
+    headless = True
     try:
         driver = initDriver(headless)
         url = f'https://www.google.com/maps/place/?q=place_id:{id}'

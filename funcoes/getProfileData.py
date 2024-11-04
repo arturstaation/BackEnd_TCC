@@ -126,7 +126,7 @@ def getDataFromProfiles(dados, id):
     with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
         futures = []
         for index, chunk in enumerate(chunks):
-            futures.append(executor.submit(processProfileChunk, chunk, initDriver(headless=False, proxy=True, proxy_data=proxies[index]), proxies[index], index, id,total_reviews))
+            futures.append(executor.submit(processProfileChunk, chunk, initDriver(headless=True, proxy=True, proxy_data=proxies[index]), proxies[index], index, id,total_reviews))
 
         for future in concurrent.futures.as_completed(futures):
             try:

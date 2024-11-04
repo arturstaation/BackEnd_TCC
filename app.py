@@ -128,12 +128,11 @@ def getCorrectRating(place_id):
         
         df = pd.DataFrame(reviews)
         result = handleGetCorrectRating(df, place_id)
-
-        print(result)
+        
         print(f"[GetCorrectRating]Request para place_id: {place_id} concluido com sucesso")
         response = {
             'hasError': False,
-            'message': 'Arquivo CSV gerado com sucesso',
+            'message': 'Novo Rating Obtido Com Sucesso!',
             'rating': result
         }
         

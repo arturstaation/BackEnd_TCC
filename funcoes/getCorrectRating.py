@@ -7,14 +7,14 @@ import re
 
 
 started = False
-scaler = None  # Inicialmente, será o scaler que vamos carregar
+scaler = None
 
 def clean_text(text, stop_words):
     if isinstance(text, str):
-        text = text.lower()  # Converter para minúsculas
-        text = re.sub(r'[^\w\s]', '', text)  # Remover pontuação
-        words = nltk.word_tokenize(text)  # Tokenizar as palavras
-        words = [word for word in words if word not in stop_words]  # Remover stopwords
+        text = text.lower()
+        text = re.sub(r'[^\w\s]', '', text)
+        words = nltk.word_tokenize(text) 
+        words = [word for word in words if word not in stop_words] 
         return ' '.join(words)
     else:
         return ''  
@@ -43,80 +43,108 @@ def convert_tempo_to_numeric(tempo):
     else:
         return np.nan  
 
-def prepare_data_for_model(df, scaler):
+def prepare_data_for_model(df):
+    global scaler
     stop_words = set(nltk.corpus.stopwords.words('portuguese'))
     
+    print("Convertendo Tempo")
     df['tempo'] = df['tempo'].apply(convert_tempo_to_numeric)
-    df['tempo'].fillna(df['tempo'].median(), inplace=True)  # Preencher valores nulos com a mediana
+    df['tempo'] = df['tempo'].fillna(df['tempo'].median()) 
     
+    print("Convertendo Local Guide")
     if df['Local Guide'].dtype == 'bool':
         df['Local Guide'] = df['Local Guide'].astype(int)
     
+
+    
+    print("Convertendo Avaliação")
     df['avaliacao'] = df['avaliacao'].apply(lambda x: clean_text(x, stop_words))
     
-    # Definir colunas numéricas
+    
     features_numericas = ['tempo', 'estrelas', 'Local Guide', 'Avaliacoes', 'Classificacoes', 'Fotos', 'Videos', 'Legendas', 'Respostas', 'Edicoes',
                           'Informadas como Incorretas', 'Lugares Adicionadas', 'Estradas Adicionadas', 'Informacoes Verificadas', 'P/R']
     
+    X_text = df['avaliacao']
+    print("Convertendo Campos Numericos")
     for feature in features_numericas:
         df[feature] = pd.to_numeric(df[feature], errors='coerce')
-        df[feature].fillna(df[feature].median(), inplace=True)
+        df[feature] = df[feature].fillna(df[feature].median())
     
-    # Selecionar os dados numéricos para normalização
+  
+    print("Normalizando Dados Numericos")
     X_additional = df[features_numericas]
     
-    # Aplicar o scaler carregado
-    X_scaled = scaler.transform(X_additional)
 
-    # Retornar os dados escalados
-    return X_scaled
+    print("Carregando vetorizador")
+    vectorizer = scaler['vectorizer']
+    X_text_vectorized = vectorizer.transform(X_text.astype(str))
+
+    
+    X_text_df = pd.DataFrame(X_text_vectorized.toarray(), index=df.index)
+    
+    print("Concatenando features adicionais com texto vetorizado")
+    X = pd.concat([X_additional.reset_index(drop=True), X_text_df.reset_index(drop=True)], axis=1)
+    X.columns = X.columns.astype(str)
+
+    return X,vectorizer
+
 
 def predict_fraude_and_save(df):
+
     global scaler
+    print(scaler)
 
-    # Preparar os dados usando apenas o scaler
-    X_scaled = prepare_data_for_model(df, scaler)
-
-    # Para este exemplo, apenas salvamos o dataframe escalado
-    df_scaled = pd.DataFrame(X_scaled, columns=['tempo', 'estrelas', 'Local Guide', 'Avaliacoes', 'Classificacoes', 'Fotos', 'Videos', 'Legendas', 'Respostas', 'Edicoes',
-                                                'Informadas como Incorretas', 'Lugares Adicionadas', 'Estradas Adicionadas', 'Informacoes Verificadas', 'P/R'])
+    model_rf = scaler['model_rf']
+    scalerobj = scaler['scaler']
+    vectorizer = scaler['vectorizer']
     
-    df_scaled['Previsao_Fraude'] = 'Indeterminado'  # Placeholder para o resultado final
+    print("Preparando dados para o modelo")
+    X, _ = prepare_data_for_model(df)
 
-    # Retornar o dataframe escalado como resultado
-    return df_scaled
+    
+    print("Normalizando dados para o modelo")
+    X_scaled = scalerobj.transform(X)
+    
+    print("Fazendo Previsões")
+    pred_rf = model_rf.predict(X_scaled)
 
-def handleGetCorrectRating(df, id):
+    df['Previsao_Fraude_RF'] = pred_rf
+
+    return df
+
+
+def handleGetCorrectRating(dic, id):
     global started
-    global scaler
     if not started:
+        print("Baixando pacotes NLTK")
         nltk.download('stopwords')
         nltk.download('punkt')
         nltk.download('punkt_tab')
-        scaler = get_latest_scaler_version()
+        print("Obtendo Scaler")
+        get_latest_scaler_version()
         started = True
+    
+    df = pd.DataFrame.from_dict(dic)
     df_resultado = predict_fraude_and_save(df)
-    df_resultado.to_csv(f'../evaluetedReviews/resultado_fraude_{id}.csv', index=False)
+    df_resultado.to_csv(f'./evaluetedReviews/resultado_fraude_{id}.csv', index=False)
+    
+    return df[df['Previsao_Fraude_RF'] == 0]['estrelas'].mean()
 
 def get_latest_scaler_version():
+    global scaler
     model_dir = './modelVersions'
     
-    # Listar os arquivos no diretório
     model_files = os.listdir(model_dir)
     
-    # Filtrar arquivos que seguem o padrão 'scaler_vX.pkl'
     version_files = [f for f in model_files if f.startswith('modelVersion_') and f.endswith('.pkl')]
     
     if not version_files:
         raise Exception("Nenhum scaler encontrado.")
     
-    # Extrair o número da versão do nome do arquivo
     version_numbers = [int(f.split('_')[1].split('.pkl')[0]) for f in version_files]
     
-    # Encontrar a maior versão
     latest_version = max(version_numbers)
     
-    # Carregar o scaler mais recente
     latest_scaler_file = os.path.join(model_dir, f'modelVersion_{latest_version}.pkl')
     
     with open(latest_scaler_file, 'rb') as f:
