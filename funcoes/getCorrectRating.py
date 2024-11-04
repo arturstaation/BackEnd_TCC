@@ -3,6 +3,7 @@ import pickle
 import pandas as pd
 import numpy as np
 import nltk
+import math
 import re
 
 
@@ -127,8 +128,8 @@ def handleGetCorrectRating(dic, id):
     df = pd.DataFrame.from_dict(dic)
     df_resultado = predict_fraude_and_save(df)
     df_resultado.to_csv(f'./evaluetedReviews/resultado_fraude_{id}.csv', index=False)
-    
-    return df[df['Previsao_Fraude_RF'] == 0]['estrelas'].mean()
+
+    return math.trunc(df[df['Previsao_Fraude_RF'] == 0]['estrelas'].mean() * 10) / 10
 
 def get_latest_scaler_version():
     global scaler
