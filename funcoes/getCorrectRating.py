@@ -154,9 +154,11 @@ def get_latest_scaler_version():
     print(f"Scaler versão {latest_version} carregado com sucesso!")
     return scaler
 
-def save_new_scaler_version(scaler, model_dir='modelVersion'):
+def handleSaveModel():
     global started
+    global scaler
     if(started):
+        model_dir = 'modelVersions'
         if not os.path.exists(model_dir):
             os.makedirs(model_dir)
 

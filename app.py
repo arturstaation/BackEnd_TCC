@@ -128,7 +128,7 @@ def getCorrectRating(place_id):
         
         df = pd.DataFrame(reviews)
         result = handleGetCorrectRating(df, place_id)
-        
+
         print(f"[GetCorrectRating]Request para place_id: {place_id} concluido com sucesso")
         response = {
             'hasError': False,
@@ -151,12 +151,12 @@ def getCorrectRating(place_id):
             'message': error_message
     }, 500  
    
-@app.route('/SaveModel/', methods=['GET'])
+@app.route('/SaveModel/', methods=['POST'])
 def saveModel():
    print(f"[SaveModel]Request Recebido para salvar o modelo")
    try: 
     
-        saveModel()
+        handleSaveModel()
         
         print(f"[SaveModel]Modelo salvo com sucesso")
         response = {
