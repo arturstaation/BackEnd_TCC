@@ -11,7 +11,7 @@ from chromeExtension import *
 from variaveis import *
 
 MAX_TIME_OUT = 20
-MAX_RETRYS = 5
+MAX_RETRYS = 10
 MAX_THREADS = 3
 
 proxies = []
@@ -75,7 +75,7 @@ def solveCaptcha(driver, proxy, current_captcha_retry,chunk_index,thread_current
         print(f"Erro ao solicitar task para resolver o captcha do perfil {reviews_analisadas+1} na tentativa {current_captcha_retry+1} (Thread {chunk_index}). Erro: {task['errorDescription']}")
         return
 
-def processProfileChunk(dados_chunk, driver, proxy, chunk_index, id, total_reviews):
+def processProfileChunk(dados_chunk, driver, proxy, chunk_index, id, total_reviews,has_restarted,current_captcha_retry,current_profile_retry):
     global reviews_analisadas
     global ultimo_intervalo
     
@@ -84,7 +84,6 @@ def processProfileChunk(dados_chunk, driver, proxy, chunk_index, id, total_revie
             
             current_captcha_retry = 0
             current_profile_retry = 0
-            has_restarted = 0
             profile_data = getDataFromProfile(data['perfil'], driver,proxy,current_profile_retry,current_captcha_retry, chunk_index,has_restarted,i)
             data['Local Guide'] = profile_data['Local Guide']
             
@@ -119,7 +118,7 @@ def getDataFromProfiles(dados, id):
     global proxies
     global MAX_THREADS
     reviews_analisadas = 0
-    ultimo_intervalo = -1
+    ultimo_intervalo = -1    
     
     total_reviews = len(dados)-1
 
@@ -128,9 +127,14 @@ def getDataFromProfiles(dados, id):
     chunks = np.array_split(dados, MAX_THREADS)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+        
+
         futures = []
         for index, chunk in enumerate(chunks):
-            futures.append(executor.submit(processProfileChunk, chunk, initDriver(headless=True, proxy=True, proxy_data=proxies[index]), proxies[index], index, id,total_reviews))
+            has_restarted = 0
+            current_captcha_retry = 0
+            current_profile_retry = 0
+            futures.append(executor.submit(processProfileChunk, chunk, initDriver(headless=True, proxy=True, proxy_data=proxies[index]), proxies[index], index, id,total_reviews,has_restarted,current_captcha_retry,current_profile_retry))
 
         for future in concurrent.futures.as_completed(futures):
             try:
@@ -196,48 +200,25 @@ def getDataFromProfile(perfil,driver, proxy, current_profile_retry, current_capt
             )
            
             if("Nossos sistemas detectaram tráfego incomum na sua rede de computadores" in captcha.text):
-                solveCaptcha(driver,proxy, current_captcha_retry,chunk_index,thread_current_index)
-                current_captcha_retry+=1
-                return getDataFromProfile(perfil,driver, proxy,current_profile_retry, current_captcha_retry,chunk_index,has_restarted, thread_current_index)
+                solveCaptcha(driver,proxy, current_profile_retry,chunk_index,thread_current_index)
+                current_profile_retry+=1
+                return getDataFromProfile(perfil,driver, proxy,current_profile_retry,chunk_index,has_restarted, thread_current_index)
             
         except Exception as e:
-
             if(current_profile_retry > MAX_RETRYS):
-                if(has_restarted == 1):
-                    raise Exception(f"Numero maximo de tentativas para obter dados de um perfil excedidas (Thread {chunk_index}). Erro: {str(e)}")
-                else:
-                    driver.quit()
-                    current_profile_retry = 0
-                    has_restarted = 1
-                    driver = initDriver(headless=True, proxy=True, proxy_data=proxies[chunk_index])
+                raise Exception(f"Numero maximo de tentativas para obter dados de um perfil excedidas (Thread {chunk_index}). Erro: {str(e)}")
             if(current_captcha_retry > MAX_RETRYS):
-                if(has_restarted == 1):
-                    raise Exception(str(e))
-            else:
-                driver.quit()
-                current_captcha_retry = 0
-                has_restarted = 1
-                driver = initDriver(headless=True, proxy=True, proxy_data=proxies[chunk_index])
+                raise Exception(str(e))
+    
             print(f"Erro ao obter dados do perfil da review {reviews_analisadas+1} - {current_profile_retry+1}a tentativa (Thread {chunk_index}) - Erro: {str(e)}")
             current_profile_retry+=1
             return getDataFromProfile(perfil,driver,proxy,current_profile_retry, current_captcha_retry,chunk_index,has_restarted, thread_current_index)
         
         if(current_profile_retry > MAX_RETRYS):
-            if(has_restarted == 1):
-                raise Exception(f"Numero maximo de tentativas para obter dados de um perfil excedidas (Thread {chunk_index}). Erro: {str(e)}")
-            else:
-                driver.quit()
-                current_profile_retry = 0
-                has_restarted = 1
-                driver = initDriver(headless=True, proxy=True, proxy_data=proxies[chunk_index])
+            raise Exception(f"Numero maximo de tentativas para obter dados de um perfil excedidas (Thread {chunk_index}). Erro: {str(e)}")
         if(current_captcha_retry > MAX_RETRYS):
-            if(has_restarted == 1):
-                raise Exception(str(e))
-            else:
-                driver.quit()
-                current_captcha_retry = 0
-                has_restarted = 1
-                driver = initDriver(headless=True, proxy=True, proxy_data=proxies[chunk_index])
+            raise Exception(str(e))
+                
         print(f"Erro ao obter dados do perfil da review {reviews_analisadas+1} - {current_profile_retry+1}a tentativa (Thread {chunk_index}) - Erro: {str(e)}")
         current_profile_retry+=1
         return getDataFromProfile(perfil,driver,proxy,current_profile_retry, current_captcha_retry,chunk_index,has_restarted, thread_current_index)
