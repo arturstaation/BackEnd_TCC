@@ -2,6 +2,7 @@ from flask import Flask
 from funcoes.getEstabelecimentos import *
 from funcoes.getReviews import *
 from funcoes.getCorrectRating import *
+from funcoes.getDataAnalysis import *
 import pandas as pd
 from io import StringIO
 import base64
@@ -168,6 +169,33 @@ def saveModel():
 
    except Exception as e:
     print(f"[SaveModel]Modelo salvo com erro: {str(e)}")
+    return {
+            'hasError': True,
+            'message': error_message
+    }, 500 
+   
+@app.route('/GetDataAnalysis/', methods=['GET'])
+def getDataAnalysis():
+   print(f"[GetDataAnalysis]Request Recebido Coletar os Dados analisados")
+   try: 
+    
+        total_reviews, total_fraude = handleDataAnalysis()
+        
+        print(f"[GetDataAnalysis]Dados obtidos com sucesso")
+        response = {
+            'hasError': False,
+            'message': {
+               'totalReviews': str(total_reviews),
+               'totalFraude': str(total_fraude),
+               'fraudesRelativas': str((total_fraude/total_reviews)*100)
+            }
+        }
+        return response
+        
+        
+
+   except Exception as e:
+    print(f"[GetDataAnalysis]Dados obtidos com erro: {str(e)}")
     return {
             'hasError': True,
             'message': error_message

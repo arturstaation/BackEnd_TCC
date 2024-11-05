@@ -128,7 +128,7 @@ def handleGetCorrectRating(reviews, id):
     df_resultado = predict_fraude_and_save(df,id)
     df_resultado.to_csv(f'./evaluetedReviews/resultado_fraude_{id}.csv', index=False)
 
-    return math.trunc(df[df['Previsao_Fraude_RF'] == 0]['estrelas'].mean() * 10) / 10
+    return math.trunc(df_resultado[df_resultado['Previsao_Fraude_RF'] == 0]['estrelas'].mean() * 10) / 10
 
 def get_latest_scaler_version():
     global scaler
