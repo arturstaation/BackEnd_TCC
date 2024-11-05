@@ -9,6 +9,8 @@ from funcoes.getDriver import *
 from funcoes.getProxies import *
 from chromeExtension import *
 from variaveis import *
+from funcoes.logMessage import *
+
 
 MAX_TIME_OUT = 20
 MAX_RETRYS = 10
@@ -23,7 +25,7 @@ def solveCaptcha(driver, proxy, current_captcha_retry,chunk_index,thread_current
     global reviews_analisadas
     if(current_captcha_retry > MAX_RETRYS):
         raise Exception("Numero maximo de tentativas para solucionar o captcha excedidas.")
-    print(f"Tentando Resolver Captcha do perfil {thread_current_index+1} - {current_captcha_retry+1}a tentativa (Thread {chunk_index})")
+    log(f"Tentando Resolver Captcha do perfil {thread_current_index+1} - {current_captcha_retry+1}a tentativa (Thread {chunk_index})")
     
     chave_captcha = driver.find_element(By.XPATH, "/html/body/div[1]/form/div").get_attribute('data-sitekey')
     data_s = driver.find_element(By.XPATH, "/html/body/div[1]/form/div").get_attribute('data-s')
@@ -59,7 +61,7 @@ def solveCaptcha(driver, proxy, current_captcha_retry,chunk_index,thread_current
             status_request = requests.post("https://api.anti-captcha.com/getTaskResult", json=data)
             status = status_request.json()
             if(status['errorId'] != 0):
-               print(f"Erro ao Resolver o Captcha do Perfil {reviews_analisadas+1} na {current_captcha_retry+1} tentativa (Thread {chunk_index}). Erro: {status['errorDescription']}") 
+               log(f"Erro ao Resolver o Captcha do Perfil {reviews_analisadas+1} na {current_captcha_retry+1} tentativa (Thread {chunk_index}). Erro: {status['errorDescription']}") 
                break
             if(status['status'] != 'processing'):
                 resposta = status['solution']['gRecaptchaResponse']
@@ -72,7 +74,7 @@ def solveCaptcha(driver, proxy, current_captcha_retry,chunk_index,thread_current
         requests.get(f"https://{PROXY_USER}:{PROXY_PASSWORD}@gw.dataimpulse.com:777/api/rotate_ip?port={proxy[1]}") 
         return
     else:
-        print(f"Erro ao solicitar task para resolver o captcha do perfil {reviews_analisadas+1} na tentativa {current_captcha_retry+1} (Thread {chunk_index}). Erro: {task['errorDescription']}")
+        log(f"Erro ao solicitar task para resolver o captcha do perfil {reviews_analisadas+1} na tentativa {current_captcha_retry+1} (Thread {chunk_index}). Erro: {task['errorDescription']}")
         return
 
 def processProfileChunk(dados_chunk, driver, proxy, chunk_index, id, total_reviews,has_restarted,current_captcha_retry,current_profile_retry):
@@ -92,7 +94,7 @@ def processProfileChunk(dados_chunk, driver, proxy, chunk_index, id, total_revie
             
             del data['perfil']
             if current_captcha_retry != 0:
-                print(f"Captcha do Perfil {reviews_analisadas} Resolvido na {current_captcha_retry}a tentativa (Thread {chunk_index})")
+                log(f"Captcha do Perfil {reviews_analisadas} Resolvido na {current_captcha_retry}a tentativa (Thread {chunk_index})")
 
 
             reviews_analisadas += 1
@@ -100,13 +102,13 @@ def processProfileChunk(dados_chunk, driver, proxy, chunk_index, id, total_revie
             percent_rounded = int(percent // 10) * 10
             
             if percent_rounded != ultimo_intervalo:
-                print(f"{percent_rounded}% perfis processados do estabelecimento {id} (Thread {chunk_index})")
+                log(f"{percent_rounded}% perfis processados do estabelecimento {id} (Thread {chunk_index})")
                 ultimo_intervalo = percent_rounded
 
             
-        print(f"Thread {chunk_index} para o processamento do estabelecimento {id} finalizada com sucesso")
+        log(f"Thread {chunk_index} para o processamento do estabelecimento {id} finalizada com sucesso")
     except Exception as e:
-        print(f"Thread {chunk_index} para o processamento do estabelecimento {id} finalizada com erro. Erro: {str(e)}")
+        log(f"Thread {chunk_index} para o processamento do estabelecimento {id} finalizada com erro. Erro: {str(e)}")
         raise Exception(f"Erro ao processar do estabelecimento {id} perfis na Thread {chunk_index} - Erro: {str(e)}")
     finally:
         driver.quit()
@@ -140,7 +142,7 @@ def getDataFromProfiles(dados, id):
             try:
                 future.result()  
             except Exception as e:
-                print(f"Erro na thread: {e}")
+                log(f"Erro na thread: {e}")
                 raise Exception(str(e))
 
 def getDataFromProfile(perfil,driver,proxy,current_profile_retry, current_captcha_retry,chunk_index, thread_current_index):  
@@ -210,7 +212,7 @@ def getDataFromProfile(perfil,driver,proxy,current_profile_retry, current_captch
             if(current_captcha_retry > MAX_RETRYS):
                 raise Exception(str(e))
     
-            print(f"Erro ao obter dados do perfil da review {reviews_analisadas+1} - {current_profile_retry+1}a tentativa (Thread {chunk_index}) - Erro: {str(e)}")
+            log(f"Erro ao obter dados do perfil da review {reviews_analisadas+1} - {current_profile_retry+1}a tentativa (Thread {chunk_index}) - Erro: {str(e)}")
             current_profile_retry+=1
             return getDataFromProfile(perfil,driver,proxy,current_profile_retry, current_captcha_retry,chunk_index, thread_current_index)
         
@@ -219,6 +221,6 @@ def getDataFromProfile(perfil,driver,proxy,current_profile_retry, current_captch
         if(current_captcha_retry > MAX_RETRYS):
             raise Exception(str(e))
                 
-        print(f"Erro ao obter dados do perfil da review {reviews_analisadas+1} - {current_profile_retry+1}a tentativa (Thread {chunk_index}) - Erro: {str(e)}")
+        log(f"Erro ao obter dados do perfil da review {reviews_analisadas+1} - {current_profile_retry+1}a tentativa (Thread {chunk_index}) - Erro: {str(e)}")
         current_profile_retry+=1
         return getDataFromProfile(perfil,driver,proxy,current_profile_retry, current_captcha_retry,chunk_index, thread_current_index)

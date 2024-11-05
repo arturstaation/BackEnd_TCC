@@ -5,6 +5,7 @@ import numpy as np
 import nltk
 import math
 import re
+from funcoes.logMessage import *
 
 
 started = False
@@ -48,17 +49,17 @@ def prepare_data_for_model(df,id):
     global scaler
     stop_words = set(nltk.corpus.stopwords.words('portuguese'))
     
-    print(f"Convertendo Tempo - {id}")
+    log(f"Convertendo Tempo - {id}")
     df['tempo'] = df['tempo'].apply(convert_tempo_to_numeric)
     df['tempo'] = df['tempo'].fillna(df['tempo'].median()) 
     
-    print(f"Convertendo Local Guide - {id}")
+    log(f"Convertendo Local Guide - {id}")
     if df['Local Guide'].dtype == 'bool':
         df['Local Guide'] = df['Local Guide'].astype(int)
     
 
     
-    print(f"Convertendo Avaliação - {id}")
+    log(f"Convertendo Avaliação - {id}")
     df['avaliacao'] = df['avaliacao'].apply(lambda x: clean_text(x, stop_words))
     
     
@@ -66,24 +67,24 @@ def prepare_data_for_model(df,id):
                           'Informadas como Incorretas', 'Lugares Adicionadas', 'Estradas Adicionadas', 'Informacoes Verificadas', 'P/R']
     
     X_text = df['avaliacao']
-    print(f"Convertendo Campos Numericos - {id}")
+    log(f"Convertendo Campos Numericos - {id}")
     for feature in features_numericas:
         df[feature] = pd.to_numeric(df[feature], errors='coerce')
         df[feature] = df[feature].fillna(df[feature].median())
     
   
-    print(f"Normalizando Dados Numericos - {id}")
+    log(f"Normalizando Dados Numericos - {id}")
     X_additional = df[features_numericas]
     
 
-    print(f"Carregando vetorizador - {id}")
+    log(f"Carregando vetorizador - {id}")
     vectorizer = scaler['vectorizer']
     X_text_vectorized = vectorizer.transform(X_text.astype(str))
 
     
     X_text_df = pd.DataFrame(X_text_vectorized.toarray(), index=df.index)
     
-    print(f"Concatenando features adicionais com texto vetorizado - {id}")
+    log(f"Concatenando features adicionais com texto vetorizado - {id}")
     X = pd.concat([X_additional.reset_index(drop=True), X_text_df.reset_index(drop=True)], axis=1)
     X.columns = X.columns.astype(str)
 
@@ -98,14 +99,14 @@ def predict_fraude_and_save(df,id):
     scalerobj = scaler['scaler']
     vectorizer = scaler['vectorizer']
     
-    print(f"Preparando dados para o modelo - {id}")
+    log(f"Preparando dados para o modelo - {id}")
     X, _ = prepare_data_for_model(df,id)
 
     
-    print(f"Normalizando dados para o modelo - {id}")
+    log(f"Normalizando dados para o modelo - {id}")
     X_scaled = scalerobj.transform(X)
     
-    print(f"Fazendo Previsões - {id}")
+    log(f"Fazendo Previsões - {id}")
     pred_rf = model_rf.predict(X_scaled)
 
     df['Previsao_Fraude_RF'] = pred_rf
@@ -116,22 +117,24 @@ def predict_fraude_and_save(df,id):
 def handleGetCorrectRating(reviews, id):
     global started
     if not started:
-        print("Baixando pacotes NLTK")
+        log("Baixando pacotes NLTK")
         nltk.download('stopwords')
         nltk.download('punkt')
         nltk.download('punkt_tab')
-        print("Obtendo Scaler")
+        log("Obtendo Scaler")
         get_latest_scaler_version()
         started = True
     
     df = pd.DataFrame.from_dict(reviews)
     df_resultado = predict_fraude_and_save(df,id)
 
-    print(f"Resultado da Analise do Estabelecimento {id}")
-    print("Antes: " + str(math.trunc(df_resultado['estrelas'].mean() * 10) / 10))
-    print("Depois: " + str(math.trunc(df_resultado[df_resultado['Previsao_Fraude_RF'] == 0]['estrelas'].mean() * 10) / 10))
-    print("Total de Avaliações: " + str(df_resultado.shape[0]))
-    print("Fraudes: " + str((df_resultado['Previsao_Fraude_RF'] == 1).sum()))
+    log(f"""Resultado da Análise do Estabelecimento {id}
+Antes: {math.trunc(df_resultado['estrelas'].mean() * 10) / 10}
+Depois: {math.trunc(df_resultado[df_resultado['Previsao_Fraude_RF'] == 0]['estrelas'].mean() * 10) / 10}
+Total de Avaliações: {df_resultado.shape[0]}
+Fraudes: {(df_resultado['Previsao_Fraude_RF'] == 1).sum()}
+""")
+
 
     df_resultado.to_csv(f'./evaluetedReviews/resultado_fraude_{id}.csv', index=False)
     return math.trunc(df_resultado[df_resultado['Previsao_Fraude_RF'] == 0]['estrelas'].mean() * 10) / 10
@@ -156,7 +159,7 @@ def get_latest_scaler_version():
     with open(latest_scaler_file, 'rb') as f:
         scaler = pickle.load(f)
     
-    print(f"Scaler versão {latest_version} carregado com sucesso!")
+    log(f"Scaler versão {latest_version} carregado com sucesso!")
     return scaler
 
 def handleSaveModel():
@@ -182,6 +185,6 @@ def handleSaveModel():
         with open(new_scaler_file, 'wb') as f:
             pickle.dump(scaler, f)
 
-        print(f"Novo scaler salvo como: {new_scaler_file}")
+        log(f"Novo scaler salvo como: {new_scaler_file}")
     else:
         raise Exception("Modelo ainda não foi inicializado")

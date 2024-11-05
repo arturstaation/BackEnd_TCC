@@ -3,3 +3,4 @@ variaveis.py
 __pycache__
 extension/
 *.zip
+log.txt

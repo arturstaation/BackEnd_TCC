@@ -1,5 +1,7 @@
 import requests
 from variaveis import GOOGLE_PLACES_API_KEY
+from funcoes.logMessage import *
+
 def handleGetEstabelecimentos(nome):
 
     try:
@@ -37,7 +39,7 @@ def handleGetEstabelecimentos(nome):
                 
         else:
             error_message = f"Erro ao Obter Estabelecimentos {nome}.Erro: {result}"
-            print(error_message)
+            log(error_message)
             return ("Erro ao Obter Estabelecimentos."),""
         next_token = ""
         if('next_page_token' in  result):
@@ -49,5 +51,5 @@ def handleGetEstabelecimentos(nome):
     except Exception as e:
 
         error_message = f"Erro ao Obter Estabelecimentos {nome}. Erro: {str(e)}"
-        print(error_message)
+        log(error_message)
         return ("Erro ao Obter Estabelecimentos"),""

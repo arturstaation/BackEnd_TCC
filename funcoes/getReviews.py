@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from variaveis import *
 from funcoes.getProfileData import *
 from funcoes.getDriver import *
+from funcoes.logMessage import *
 
 MAX_TIME_OUT = 20
 MAX_RETRYS = 5
@@ -63,7 +64,7 @@ def getData(response, dados, num, id):
             percent_rounded = int(percent // 10) * 10
 
             if percent_rounded != ultimo_intervalo:
-                print(f"{percent_rounded}% reviews processadas do estabelecimento {id}")
+                log(f"{percent_rounded}% reviews processadas do estabelecimento {id}")
                 ultimo_intervalo = percent_rounded
     except Exception as e:
         raise Exception(str(e))
@@ -150,7 +151,7 @@ def handleGetReviews(id):
                     actions.send_keys(Keys.END).perform()
             if (time.time() - start_time) > MAX_TIME_OUT and contador < 3:
                 raise Exception("Tempo máximo excedido para obter o XHR")
-            print(f"XHR obtido para o estabelecimento {id}")
+            log(f"XHR obtido para o estabelecimento {id}")
             response = json.loads(requests.get(antigo).text[5:].encode('utf-8', 'ignore').decode('utf-8'))
             token_atual = response[1]
             token_atual = token_atual.replace("=", "%3D")
@@ -192,10 +193,10 @@ def handleGetReviews(id):
                 driver.quit()
                 getDataFromProfiles(dados, id)
             else:
-                print(f"Estabelecimento {id} não possui reviews")
+                log(f"Estabelecimento {id} não possui reviews")
                 driver.quit()  
         return dados
     except Exception as e:
         error_message = f"Erro ao Obter Reviews do Estabelecimento de Id {id}. Erro: {str(e)}"
-        print(error_message)
+        log(error_message)
         return ("Erro ao Obter Reviews do Estabelecimento") 
