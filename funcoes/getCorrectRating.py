@@ -44,21 +44,21 @@ def convert_tempo_to_numeric(tempo):
     else:
         return np.nan  
 
-def prepare_data_for_model(df):
+def prepare_data_for_model(df,id):
     global scaler
     stop_words = set(nltk.corpus.stopwords.words('portuguese'))
     
-    print("Convertendo Tempo")
+    print(f"Convertendo Tempo - {id}")
     df['tempo'] = df['tempo'].apply(convert_tempo_to_numeric)
     df['tempo'] = df['tempo'].fillna(df['tempo'].median()) 
     
-    print("Convertendo Local Guide")
+    print(f"Convertendo Local Guide - {id}")
     if df['Local Guide'].dtype == 'bool':
         df['Local Guide'] = df['Local Guide'].astype(int)
     
 
     
-    print("Convertendo Avaliação")
+    print(f"Convertendo Avaliação - {id}")
     df['avaliacao'] = df['avaliacao'].apply(lambda x: clean_text(x, stop_words))
     
     
@@ -66,47 +66,46 @@ def prepare_data_for_model(df):
                           'Informadas como Incorretas', 'Lugares Adicionadas', 'Estradas Adicionadas', 'Informacoes Verificadas', 'P/R']
     
     X_text = df['avaliacao']
-    print("Convertendo Campos Numericos")
+    print(f"Convertendo Campos Numericos - {id}")
     for feature in features_numericas:
         df[feature] = pd.to_numeric(df[feature], errors='coerce')
         df[feature] = df[feature].fillna(df[feature].median())
     
   
-    print("Normalizando Dados Numericos")
+    print(f"Normalizando Dados Numericos - {id}")
     X_additional = df[features_numericas]
     
 
-    print("Carregando vetorizador")
+    print(f"Carregando vetorizador - {id}")
     vectorizer = scaler['vectorizer']
     X_text_vectorized = vectorizer.transform(X_text.astype(str))
 
     
     X_text_df = pd.DataFrame(X_text_vectorized.toarray(), index=df.index)
     
-    print("Concatenando features adicionais com texto vetorizado")
+    print(f"Concatenando features adicionais com texto vetorizado - {id}")
     X = pd.concat([X_additional.reset_index(drop=True), X_text_df.reset_index(drop=True)], axis=1)
     X.columns = X.columns.astype(str)
 
     return X,vectorizer
 
 
-def predict_fraude_and_save(df):
+def predict_fraude_and_save(df,id):
 
     global scaler
-    print(scaler)
 
     model_rf = scaler['model_rf']
     scalerobj = scaler['scaler']
     vectorizer = scaler['vectorizer']
     
-    print("Preparando dados para o modelo")
-    X, _ = prepare_data_for_model(df)
+    print(f"Preparando dados para o modelo - {id}")
+    X, _ = prepare_data_for_model(df,id)
 
     
-    print("Normalizando dados para o modelo")
+    print(f"Normalizando dados para o modelo - {id}")
     X_scaled = scalerobj.transform(X)
     
-    print("Fazendo Previsões")
+    print(f"Fazendo Previsões - {id}")
     pred_rf = model_rf.predict(X_scaled)
 
     df['Previsao_Fraude_RF'] = pred_rf
@@ -114,7 +113,7 @@ def predict_fraude_and_save(df):
     return df
 
 
-def handleGetCorrectRating(dic, id):
+def handleGetCorrectRating(reviews, id):
     global started
     if not started:
         print("Baixando pacotes NLTK")
@@ -125,8 +124,8 @@ def handleGetCorrectRating(dic, id):
         get_latest_scaler_version()
         started = True
     
-    df = pd.DataFrame.from_dict(dic)
-    df_resultado = predict_fraude_and_save(df)
+    df = pd.DataFrame.from_dict(reviews)
+    df_resultado = predict_fraude_and_save(df,id)
     df_resultado.to_csv(f'./evaluetedReviews/resultado_fraude_{id}.csv', index=False)
 
     return math.trunc(df[df['Previsao_Fraude_RF'] == 0]['estrelas'].mean() * 10) / 10

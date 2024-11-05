@@ -84,7 +84,7 @@ def processProfileChunk(dados_chunk, driver, proxy, chunk_index, id, total_revie
             
             current_captcha_retry = 0
             current_profile_retry = 0
-            profile_data = getDataFromProfile(data['perfil'], driver,proxy,current_profile_retry,current_captcha_retry, chunk_index,has_restarted,i)
+            profile_data = getDataFromProfile(data['perfil'], driver,proxy,current_profile_retry,current_captcha_retry, chunk_index,i)
             data['Local Guide'] = profile_data['Local Guide']
             
             for field in field_names:
@@ -143,7 +143,7 @@ def getDataFromProfiles(dados, id):
                 print(f"Erro na thread: {e}")
                 raise Exception(str(e))
 
-def getDataFromProfile(perfil,driver, proxy, current_profile_retry, current_captcha_retry,chunk_index,has_restarted, thread_current_index):  
+def getDataFromProfile(perfil,driver,proxy,current_profile_retry, current_captcha_retry,chunk_index, thread_current_index):  
     global ultimo_intervalo
     global field_names
     global proxies
@@ -202,7 +202,7 @@ def getDataFromProfile(perfil,driver, proxy, current_profile_retry, current_capt
             if("Nossos sistemas detectaram tráfego incomum na sua rede de computadores" in captcha.text):
                 solveCaptcha(driver,proxy, current_profile_retry,chunk_index,thread_current_index)
                 current_profile_retry+=1
-                return getDataFromProfile(perfil,driver, proxy,current_profile_retry,chunk_index,has_restarted, thread_current_index)
+                return getDataFromProfile(perfil,driver,proxy,current_profile_retry, current_captcha_retry,chunk_index, thread_current_index)
             
         except Exception as e:
             if(current_profile_retry > MAX_RETRYS):
@@ -212,7 +212,7 @@ def getDataFromProfile(perfil,driver, proxy, current_profile_retry, current_capt
     
             print(f"Erro ao obter dados do perfil da review {reviews_analisadas+1} - {current_profile_retry+1}a tentativa (Thread {chunk_index}) - Erro: {str(e)}")
             current_profile_retry+=1
-            return getDataFromProfile(perfil,driver,proxy,current_profile_retry, current_captcha_retry,chunk_index,has_restarted, thread_current_index)
+            return getDataFromProfile(perfil,driver,proxy,current_profile_retry, current_captcha_retry,chunk_index, thread_current_index)
         
         if(current_profile_retry > MAX_RETRYS):
             raise Exception(f"Numero maximo de tentativas para obter dados de um perfil excedidas (Thread {chunk_index}). Erro: {str(e)}")
@@ -221,4 +221,4 @@ def getDataFromProfile(perfil,driver, proxy, current_profile_retry, current_capt
                 
         print(f"Erro ao obter dados do perfil da review {reviews_analisadas+1} - {current_profile_retry+1}a tentativa (Thread {chunk_index}) - Erro: {str(e)}")
         current_profile_retry+=1
-        return getDataFromProfile(perfil,driver,proxy,current_profile_retry, current_captcha_retry,chunk_index,has_restarted, thread_current_index)
+        return getDataFromProfile(perfil,driver,proxy,current_profile_retry, current_captcha_retry,chunk_index, thread_current_index)

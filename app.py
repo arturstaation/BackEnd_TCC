@@ -126,8 +126,7 @@ def getCorrectRating(place_id):
     if not (isinstance(reviews, str)):
         print(f"[GetCorrectRating]Mandando as reviews do place_id: {place_id} para avaliação da IA")
         
-        df = pd.DataFrame(reviews)
-        result = handleGetCorrectRating(df, place_id)
+        result = handleGetCorrectRating(reviews, place_id)
 
         print(f"[GetCorrectRating]Request para place_id: {place_id} concluido com sucesso")
         response = {
