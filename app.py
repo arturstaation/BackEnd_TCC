@@ -187,7 +187,7 @@ def getDataAnalysis():
             'message': {
                'totalReviews': str(total_reviews),
                'totalFraude': str(total_fraude),
-               'fraudesRelativas': str((total_fraude/total_reviews)*100)
+               'fraudesRelativas': str(str((total_fraude/total_reviews)*100) + "%")
             }
         }
         return response
