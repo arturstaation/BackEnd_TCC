@@ -126,7 +126,8 @@ def handleGetCorrectRating(reviews, id):
         started = True
     
     df = pd.DataFrame.from_dict(reviews)
-    df_resultado = predict_fraude_and_save(df,id)
+    df_resultado = predict_fraude_and_save(df.copy(),id)
+    df['Previsao_Fraude_RF'] = df_resultado['Previsao_Fraude_RF']
 
     log(f"""Resultado da Análise do Estabelecimento {id}
 Antes: {math.trunc(df_resultado['estrelas'].mean() * 10) / 10}
@@ -136,7 +137,7 @@ Fraudes: {(df_resultado['Previsao_Fraude_RF'] == 1).sum()}
 """)
 
 
-    df_resultado.to_csv(f'./evaluetedReviews/resultado_fraude_{id}.csv', index=False)
+    df.to_csv(f'./evaluetedReviews/resultado_fraude_{id}.csv', index=False)
     return math.trunc(df_resultado[df_resultado['Previsao_Fraude_RF'] == 0]['estrelas'].mean() * 10) / 10
 
 def get_latest_scaler_version():

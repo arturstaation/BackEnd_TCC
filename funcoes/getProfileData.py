@@ -87,14 +87,16 @@ def processProfileChunk(dados_chunk, driver, proxy, chunk_index, id, total_revie
             current_captcha_retry = 0
             current_profile_retry = 0
             profile_data = getDataFromProfile(data['perfil'], driver,proxy,current_profile_retry,current_captcha_retry, chunk_index,i)
-            data['Local Guide'] = profile_data['Local Guide']
-            
-            for field in field_names:
-                data[field] = profile_data[field]
-            
-            del data['perfil']
-            if current_captcha_retry != 0:
-                log(f"Captcha do Perfil {reviews_analisadas} Resolvido na {current_captcha_retry}a tentativa (Thread {chunk_index})")
+
+            if(profile_data != None):
+                data['Local Guide'] = profile_data['Local Guide']
+                
+                for field in field_names:
+                    data[field] = profile_data[field]
+                
+                del data['perfil']
+                if current_captcha_retry != 0:
+                    log(f"Captcha do Perfil {reviews_analisadas} Resolvido na {current_captcha_retry}a tentativa (Thread {chunk_index})")
 
 
             reviews_analisadas += 1
@@ -136,7 +138,7 @@ def getDataFromProfiles(dados, id):
             has_restarted = 0
             current_captcha_retry = 0
             current_profile_retry = 0
-            futures.append(executor.submit(processProfileChunk, chunk, initDriver(headless=True, proxy=True, proxy_data=proxies[index]), proxies[index], index, id,total_reviews,has_restarted,current_captcha_retry,current_profile_retry))
+            futures.append(executor.submit(processProfileChunk, chunk, initDriver(headless=False, proxy=True, proxy_data=proxies[index]), proxies[index], index, id,total_reviews,has_restarted,current_captcha_retry,current_profile_retry))
 
         for future in concurrent.futures.as_completed(futures):
             try:
@@ -151,50 +153,59 @@ def getDataFromProfile(perfil,driver,proxy,current_profile_retry, current_captch
     global proxies
     obj = {field: "null" for field in field_names}
     obj['Local Guide'] = "null"
+    contributions_text = ""
     driver.get(perfil)
     try:
 
-        contributions_button = WebDriverWait(driver, MAX_TIME_OUT).until(
-                EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[1]/div/div[1]/img"))
+
+        contributions_text = WebDriverWait(driver, MAX_TIME_OUT).until(
+                EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[1]/div/div[2]/div/h1"))).text
+        
+        if(contributions_text != "Contribuições"):
+            contributions_button = WebDriverWait(driver, MAX_TIME_OUT).until(
+                    EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[8]/div[9]/div/div/div[1]/div[2]/div/div[1]/div/div/div[1]/div/div[1]/img"))
+                )
+            
+            contributions_button.click()
+            painel = WebDriverWait(driver, MAX_TIME_OUT).until( 
+                                                                                                    
+                    EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[1]/div/div[2]/div/div[2]/div"))
             )
-        
-        contributions_button.click()
-        painel = WebDriverWait(driver, MAX_TIME_OUT).until( 
-                                                                                                 
-                EC.visibility_of_element_located((By.XPATH, "/html/body/div[2]/div[3]/div[1]/div/div[2]/div/div[2]/div"))
-        )
-        painel_texto = painel.text.split('\n')
-        
-        numeros = [item for item in painel_texto if item.replace('.', '', 1).isdigit()]
+            painel_texto = painel.text.split('\n')
+            
+            numeros = [item for item in painel_texto if item.replace('.', '', 1).isdigit()]
 
-        obj['Local Guide'] = "False"
-        index = 0
-        div = 1
-        if(len(numeros) > len(field_names)):
-            obj['Local Guide'] = "True"
-            index = 3
-            div = 2
+            obj['Local Guide'] = "False"
+            index = 0
+            div = 1
+            if(len(numeros) > len(field_names)):
+                obj['Local Guide'] = "True"
+                index = 3
+                div = 2
 
 
-        if(len(numeros) == len(field_names) or len(numeros)-3 == len(field_names)):
-            for i in range (0,len(field_names)):     
+            if(len(numeros) == len(field_names) or len(numeros)-3 == len(field_names)):
+                for i in range (0,len(field_names)):     
 
-                obj[field_names[i]] = int(numeros[i+index].replace('.', '', 1))
-            return obj
-        else:
-            if(len(numeros) == len(field_names)-1 or len(numeros)-3 == len(field_names)-1):
-
-                for i in range (0,len(field_names)-1):    
-       
                     obj[field_names[i]] = int(numeros[i+index].replace('.', '', 1))
-                obj['P/R'] = obj['Informacoes Verificadas']
-                obj['Informacoes Verificadas'] = obj['Estradas Adicionadas'] 
-                fields = driver.find_element(By.XPATH, f"/html/body/div[2]/div[3]/div[1]/div/div[2]/div/div[2]/div/div/div[2]/div[{div}]/div/div[10]/span[3]")
-                obj['Estradas Adicionadas'] = fields.text
                 return obj
             else:
-                raise Exception("Dados Incompletos")
+                if(len(numeros) == len(field_names)-1 or len(numeros)-3 == len(field_names)-1):
+
+                    for i in range (0,len(field_names)-1):    
+        
+                        obj[field_names[i]] = int(numeros[i+index].replace('.', '', 1))
+                    obj['P/R'] = obj['Informacoes Verificadas']
+                    obj['Informacoes Verificadas'] = obj['Estradas Adicionadas'] 
+                    fields = driver.find_element(By.XPATH, f"/html/body/div[2]/div[3]/div[1]/div/div[2]/div/div[2]/div/div/div[2]/div[{div}]/div/div[10]/span[3]")
+                    obj['Estradas Adicionadas'] = fields.text
+                    return obj
+                else:
+                    raise Exception("Dados Incompletos")
+
+
     except Exception as e:
+        
         try:
             captcha = WebDriverWait(driver, MAX_TIME_OUT).until(
 
@@ -208,6 +219,9 @@ def getDataFromProfile(perfil,driver,proxy,current_profile_retry, current_captch
             
         except Exception as e:
             if(current_profile_retry > MAX_RETRYS):
+                if(contributions_text == "Contribuições"):
+                    log(f"Na thread {chunk_index} o perifl de numero {thread_current_index} é invalido Invalido: {perfil}")
+                    return None
                 raise Exception(f"Numero maximo de tentativas para obter dados de um perfil excedidas (Thread {chunk_index}). Erro: {str(e)}")
             if(current_captcha_retry > MAX_RETRYS):
                 raise Exception(str(e))
@@ -217,6 +231,9 @@ def getDataFromProfile(perfil,driver,proxy,current_profile_retry, current_captch
             return getDataFromProfile(perfil,driver,proxy,current_profile_retry, current_captcha_retry,chunk_index, thread_current_index)
         
         if(current_profile_retry > MAX_RETRYS):
+            if(contributions_text == "Contribuições"):
+                log(f"Na thread {chunk_index} o perifl de numero {thread_current_index} é invalido Invalido: {perfil}")
+                return None
             raise Exception(f"Numero maximo de tentativas para obter dados de um perfil excedidas (Thread {chunk_index}). Erro: {str(e)}")
         if(current_captcha_retry > MAX_RETRYS):
             raise Exception(str(e))

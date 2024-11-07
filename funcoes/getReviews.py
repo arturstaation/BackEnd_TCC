@@ -79,9 +79,8 @@ def fetch_page(url):
 def handleGetReviews(id):
     global reviews_analisadas
     reviews_analisadas = 0
-    headless = True
     try:
-        driver = initDriver(headless)
+        driver = initDriver(headless=False)
         url = f'https://www.google.com/maps/place/?q=place_id:{id}'
         driver.get(url)
         dados = []
@@ -152,36 +151,34 @@ def handleGetReviews(id):
             if (time.time() - start_time) > MAX_TIME_OUT and contador < 3:
                 raise Exception("Tempo máximo excedido para obter o XHR")
             log(f"XHR obtido para o estabelecimento {id}")
+            driver.quit()
             response = json.loads(requests.get(antigo).text[5:].encode('utf-8', 'ignore').decode('utf-8'))
             token_atual = response[1]
             token_atual = token_atual.replace("=", "%3D")
             getData(response[2], dados, num,id)
 
             token_proximo = None
-            with ThreadPoolExecutor() as executor:
-                    while True:
-                         
-                        response = fetch_page(url)
+           
+            while True:
+                    
+                response = fetch_page(url)
 
-                        
-                        if response[0] is None:
-                            token_proximo = response[1]
+                if response[0] is None:
+                    token_proximo = response[1]
 
-                           
-                            executor.submit(process_page, response, dados, num, id)
+                    
+                    getData(response[2], dados, num, id)
 
-                            
-                            if token_proximo is not None:
-                                token_proximo = token_proximo.replace("=", "%3D")
-                                url = url.replace(token_atual, token_proximo)  
-                                token_atual = token_proximo
-                            else:
-                                break  
-                        else:
-                            break  
-
-            executor.shutdown(wait=True)
-            driver.quit()
+                    
+                    if token_proximo is not None:
+                        token_proximo = token_proximo.replace("=", "%3D")
+                        url = url.replace(token_atual, token_proximo)  
+                        token_atual = token_proximo
+                    else:
+                        break  
+                else:
+                    break
+                
             getDataFromProfiles(dados, id)
         else:
             if(num != 0):
@@ -190,7 +187,7 @@ def handleGetReviews(id):
                         url = xhr_requests[i]
                 response = json.loads(requests.get(url).text[5:].encode('utf-8', 'ignore').decode('utf-8'))
                 getData(response[2], dados,num,id)
-                driver.quit()
+
                 getDataFromProfiles(dados, id)
             else:
                 log(f"Estabelecimento {id} não possui reviews")
