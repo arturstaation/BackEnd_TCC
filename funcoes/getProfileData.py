@@ -97,6 +97,9 @@ def processProfileChunk(dados_chunk, driver, proxy, chunk_index, id, total_revie
                 del data['perfil']
                 if current_captcha_retry != 0:
                     log(f"Captcha do Perfil {reviews_analisadas} Resolvido na {current_captcha_retry}a tentativa (Thread {chunk_index})")
+            else:
+                log(f"Na thread {chunk_index} o perifl de numero {i} é invalido Invalido: {data['perfil']}")
+            
 
 
             reviews_analisadas += 1
@@ -220,7 +223,6 @@ def getDataFromProfile(perfil,driver,proxy,current_profile_retry, current_captch
         except Exception as e:
             if(current_profile_retry > MAX_RETRYS):
                 if(contributions_text == "Contribuições"):
-                    log(f"Na thread {chunk_index} o perifl de numero {thread_current_index} é invalido Invalido: {perfil}")
                     return None
                 raise Exception(f"Numero maximo de tentativas para obter dados de um perfil excedidas (Thread {chunk_index}). Erro: {str(e)}")
             if(current_captcha_retry > MAX_RETRYS):
@@ -232,7 +234,6 @@ def getDataFromProfile(perfil,driver,proxy,current_profile_retry, current_captch
         
         if(current_profile_retry > MAX_RETRYS):
             if(contributions_text == "Contribuições"):
-                log(f"Na thread {chunk_index} o perifl de numero {thread_current_index} é invalido Invalido: {perfil}")
                 return None
             raise Exception(f"Numero maximo de tentativas para obter dados de um perfil excedidas (Thread {chunk_index}). Erro: {str(e)}")
         if(current_captcha_retry > MAX_RETRYS):

@@ -91,7 +91,9 @@ def getReviewsExcel(place_id):
         output = StringIO()
         
         df = pd.DataFrame(reviews)
-        df.to_csv(output, index=False)
+        df_filtrado = df[df['perfil'].isna() | (df['perfil'] == '')]
+        df_filtrado = df_filtrado.drop(columns=['perfil'])
+        df_filtrado.to_csv(output, index=False)
         
         output.seek(0)
         
@@ -128,7 +130,12 @@ def getCorrectRating(place_id):
     if not (isinstance(reviews, str)):
         log(f"[GetCorrectRating]Mandando as reviews do place_id: {place_id} para avaliação da IA")
         
-        result = handleGetCorrectRating(reviews, place_id)
+
+        
+        df = pd.DataFrame.from_dict(reviews)
+        df_filtrado = df[df['perfil'].isna() | (df['perfil'] == '')]
+        df_filtrado = df_filtrado.drop(columns=['perfil'])
+        result = handleGetCorrectRating(df_filtrado, place_id)
 
         log(f"[GetCorrectRating]Request para place_id: {place_id} concluido com sucesso")
         response = {

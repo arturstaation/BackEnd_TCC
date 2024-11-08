@@ -114,7 +114,7 @@ def predict_fraude_and_save(df,id):
     return df
 
 
-def handleGetCorrectRating(reviews, id):
+def handleGetCorrectRating(df, id):
     global started
     if not started:
         log("Baixando pacotes NLTK")
@@ -125,7 +125,6 @@ def handleGetCorrectRating(reviews, id):
         get_latest_scaler_version()
         started = True
     
-    df = pd.DataFrame.from_dict(reviews)
     df_resultado = predict_fraude_and_save(df.copy(),id)
     df['Previsao_Fraude_RF'] = df_resultado['Previsao_Fraude_RF']
 
