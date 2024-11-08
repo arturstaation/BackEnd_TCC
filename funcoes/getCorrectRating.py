@@ -114,7 +114,7 @@ def predict_fraude_and_save(df,id):
     return df
 
 
-def handleGetCorrectRating(df, id):
+def handleGetCorrectRating(df, id, erros):
     global started
     if not started:
         log("Baixando pacotes NLTK")
@@ -133,6 +133,7 @@ Antes: {math.trunc(df_resultado['estrelas'].mean() * 10) / 10}
 Depois: {math.trunc(df_resultado[df_resultado['Previsao_Fraude_RF'] == 0]['estrelas'].mean() * 10) / 10}
 Total de Avaliações: {df_resultado.shape[0]}
 Fraudes: {(df_resultado['Previsao_Fraude_RF'] == 1).sum()}
+Perfis Com Erro: {erros}
 """)
 
 

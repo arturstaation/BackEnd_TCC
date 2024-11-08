@@ -91,8 +91,11 @@ def getReviewsExcel(place_id):
         output = StringIO()
         
         df = pd.DataFrame(reviews)
-        df_filtrado = df[df['perfil'].isna() | (df['perfil'] == '')]
-        df_filtrado = df_filtrado.drop(columns=['perfil'])
+        if 'perfil' in df.columns:
+            df_filtrado = df[df['perfil'].isna() | (df['perfil'] == '')]
+            df_filtrado = df_filtrado.drop(columns=['perfil'])
+        else:
+            df_filtrado = df
         df_filtrado.to_csv(output, index=False)
         
         output.seek(0)
@@ -133,9 +136,16 @@ def getCorrectRating(place_id):
 
         
         df = pd.DataFrame.from_dict(reviews)
-        df_filtrado = df[df['perfil'].isna() | (df['perfil'] == '')]
-        df_filtrado = df_filtrado.drop(columns=['perfil'])
-        result = handleGetCorrectRating(df_filtrado, place_id)
+        erros = 0
+        if 'perfil' in df.columns:
+            contagem_preenchidos = df['perfil'].notna() & (df['perfil'] != '')
+            erros = contagem_preenchidos.sum()
+            df_filtrado = df[df['perfil'].isna() | (df['perfil'] == '')]
+            df_filtrado = df_filtrado.drop(columns=['perfil'])
+        else:
+            df_filtrado = df
+
+        result = handleGetCorrectRating(df_filtrado, place_id, erros)
 
         log(f"[GetCorrectRating]Request para place_id: {place_id} concluido com sucesso")
         response = {

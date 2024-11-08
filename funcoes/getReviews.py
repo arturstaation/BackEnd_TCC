@@ -80,7 +80,7 @@ def handleGetReviews(id):
     global reviews_analisadas
     reviews_analisadas = 0
     try:
-        driver = initDriver(headless=False)
+        driver = initDriver(headless=True)
         url = f'https://www.google.com/maps/place/?q=place_id:{id}'
         driver.get(url)
         dados = []
